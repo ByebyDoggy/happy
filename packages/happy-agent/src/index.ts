@@ -243,12 +243,14 @@ program
         return value as SupportedAgent;
     })
     .option('--create-dir', 'Allow creating the directory if it does not exist')
+    .option('--permission-mode <mode>', 'Permission mode for the agent (claude/codex), e.g. bypassPermissions or yolo')
     .option('--json', 'Output as JSON')
     .action(async (opts: {
         machine: string;
         path?: string;
         agent?: SupportedAgent;
         createDir?: boolean;
+        permissionMode?: string;
         json?: boolean;
     }) => {
         const config = loadConfig();
@@ -260,12 +262,14 @@ program
             directory,
             approvedNewDirectoryCreation: opts.createDir,
             agent: opts.agent,
+            permissionMode: opts.permissionMode,
         });
 
         const payload = {
             machineId: machine.id,
             directory,
             agent: opts.agent ?? null,
+            permissionMode: opts.permissionMode ?? null,
             ...result,
         };
 

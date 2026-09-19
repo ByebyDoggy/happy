@@ -65,6 +65,8 @@ export async function spawnSessionOnMachine(
         approvedNewDirectoryCreation?: boolean;
         agent?: SupportedAgent;
         providerToken?: string;
+        /** Claude/Codex permission mode, e.g. 'bypassPermissions' or 'yolo'. */
+        permissionMode?: string;
     },
 ): Promise<SpawnMachineSessionResult> {
     const socket = io(config.serverUrl, {
@@ -89,6 +91,7 @@ export async function spawnSessionOnMachine(
                 approvedNewDirectoryCreation: options.approvedNewDirectoryCreation ?? false,
                 token: options.providerToken,
                 agent: options.agent,
+                permissionMode: options.permissionMode,
             }),
         );
 
