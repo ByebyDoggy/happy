@@ -555,6 +555,17 @@ export const pt: TranslationStructure = {
         hideArchived: 'Ocultar arquivadas',
         newSession: 'Nova sessão',
         projects: "Projetos",
+        selectArchived: 'Selecionar',
+        cancelSelection: 'Cancelar',
+        selectAllArchived: 'Selecionar tudo',
+        deselectAllArchived: 'Desmarcar tudo',
+        deleteSelected: ({ count }: { count: number }) => `Excluir ${plural({ count, singular: 'sessão', plural: 'sessões' })}`,
+        deleteArchivedTitle: 'Excluir sessões arquivadas',
+        deleteArchivedMessage: ({ count }: { count: number }) => `Excluir permanentemente ${plural({ count, singular: 'esta sessão', plural: `${count} sessões arquivadas` })}? As conversas, mensagens e anexos são removidos do servidor e não podem ser recuperados.`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `${plural({ count, singular: 'Foi ignorado', plural: `Foram ignorados ${count}` })} ${plural({ count, singular: 'um bot', plural: 'bots' })} — um bot mantém uma única conversa contínua, então arquive-o.`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `${plural({ count, singular: 'A sessão selecionada é um bot', plural: `Todas as ${count} sessões selecionadas são bots` })}. Um bot mantém uma única conversa contínua e não pode ser excluído — arquive-o.`,
+        deleteArchivedPartialTitle: 'Algumas sessões não foram excluídas',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `Excluídas: ${deleted}; falharam: ${failed}.`,
     },
 
     zen: {

@@ -556,6 +556,17 @@ export const ca: TranslationStructure = {
         hideArchived: 'Amaga arxivades',
         newSession: 'Nova sessió',
         projects: "Projectes",
+        selectArchived: 'Selecciona',
+        cancelSelection: 'Cancel·la',
+        selectAllArchived: 'Selecciona-ho tot',
+        deselectAllArchived: 'Desselecciona-ho tot',
+        deleteSelected: ({ count }: { count: number }) => `Elimina ${plural({ count, singular: 'sessió', plural: 'sessions' })}`,
+        deleteArchivedTitle: 'Elimina les sessions arxivades',
+        deleteArchivedMessage: ({ count }: { count: number }) => `Voleu eliminar permanentment ${plural({ count, singular: 'aquesta sessió', plural: `${count} sessions arxivades` })}? Les converses, els missatges i els adjunts s'eliminen del servidor i no es poden recuperar.`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `${plural({ count, singular: "S'ha omès", plural: `S'han omès ${count}` })} ${plural({ count, singular: 'un bot', plural: 'bots' })} — un bot manté una sola conversa contínua, així que arxiva'l.`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `${plural({ count, singular: 'La sessió seleccionada és un bot', plural: `Les ${count} sessions seleccionades són bots` })}. Un bot manté una sola conversa contínua i no es pot eliminar — arxiva'l.`,
+        deleteArchivedPartialTitle: 'Algunes sessions no s\'han eliminat',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `Eliminades: ${deleted}; fallides: ${failed}.`,
     },
 
     zen: {

@@ -572,6 +572,17 @@ export const ru: TranslationStructure = {
         hideArchived: 'Скрыть архив',
         newSession: 'Новая сессия',
         projects: "Проекты",
+        selectArchived: 'Выбрать',
+        cancelSelection: 'Отмена',
+        selectAllArchived: 'Выбрать все',
+        deselectAllArchived: 'Снять выбор',
+        deleteSelected: ({ count }: { count: number }) => `Удалить ${count} ${plural({ count, one: 'сессию', few: 'сессии', many: 'сессий' })}`,
+        deleteArchivedTitle: 'Удалить архивные сессии',
+        deleteArchivedMessage: ({ count }: { count: number }) => `Безвозвратно удалить ${count} ${plural({ count, one: 'архивную сессию', few: 'архивные сессии', many: 'архивных сессий' })}? Диалоги, сообщения и вложения будут удалены с сервера и не подлежат восстановлению.`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `${plural({ count, one: 'Бот оставлен', few: 'Бота оставлены', many: 'Ботов оставлено' })} без изменений — у бота одна непрерывная беседа, поэтому его нужно архивировать.`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `Все выбранные сессии (${count}) — боты. У бота одна непрерывная беседа, удалить его нельзя — используйте архивацию.`,
+        deleteArchivedPartialTitle: 'Часть сессий не удалена',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `Удалено: ${deleted}; с ошибкой: ${failed}.`,
     },
 
     zen: {

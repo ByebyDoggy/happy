@@ -60,11 +60,32 @@ const stylesheet = StyleSheet.create((theme) => ({
         maxWidth: '100%',
         marginTop: 32,
     },
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 16,
+    },
+    dividerLine: {
+        flex: 1,
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: theme.colors.divider,
+    },
+    dividerText: {
+        ...Typography.default(),
+        fontSize: 13,
+        color: theme.colors.textSecondary,
+    },
 }));
 
 /**
  * Restore by scanning from another phone that already has the account.
  * The QR here is scanned by the other device, not by this one.
+ *
+ * Entering the secret key by hand is offered at the same level as the code
+ * rather than as a footnote under it: both are ways to restore the same
+ * account, and someone who has the key written down should not have to open
+ * the scanner to find that out.
  */
 export default function Restore() {
     const { theme } = useUnistyles();
@@ -150,10 +171,14 @@ export default function Restore() {
                 </View>
             )}
             <View style={styles.buttonContainer}>
+                <View style={styles.dividerRow}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>{t('onboarding.restoreOr')}</Text>
+                    <View style={styles.dividerLine} />
+                </View>
                 <RoundButton
                     size="normal"
-                    display="inverted"
-                    title={t('onboarding.restoreUseKey')}
+                    title={t('onboarding.enterSecretKey')}
                     onPress={() => router.push('/restore/manual')}
                 />
             </View>

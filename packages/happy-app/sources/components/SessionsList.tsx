@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Pressable, FlatList, NativeScrollEvent, NativeSyntheticEvent, Platform } from 'react-native';
+import { View, Pressable, FlatList, ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent, Platform } from 'react-native';
 import { Text } from '@/components/StyledText';
 import { usePathname, useRouter } from 'expo-router';
-import { SessionListViewItem, SessionRowData, useAllMachines, useSetting, useSettingMutable } from '@/sync/storage';
+import { SessionListViewItem, SessionRowData, useAllMachines, useSessionListViewData, useSetting, useSettingMutable } from '@/sync/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { type SessionState, formatLastSeen, vibingMessages } from '@/utils/sessionUtils';
 import { Avatar } from './Avatar';
@@ -27,6 +27,9 @@ import { t } from '@/text';
 import { SessionShortcutHintBadge } from './ShortcutHints';
 import { ProviderIcon } from './ProviderIcon';
 import { buildSessionProjectDisplayGroups } from '@/utils/sessionDisplayOrder';
+import { SelectionCheckbox } from './SelectionCheckbox';
+import { useArchiveBulkDelete } from '@/hooks/useArchiveBulkDelete';
+import { collectArchivedTargets } from '@/hooks/archiveSelection';
 
 type SessionListDisplayItem = SessionListViewItem | {
     type: 'machine-header';
@@ -37,6 +40,16 @@ type SessionListDisplayItem = SessionListViewItem | {
     hidden: boolean;
     /** Sits inside the grey heading band rather than floating on the page. */
     banded?: boolean;
+    /** Selection mode is open, so the row becomes its toolbar. */
+    selecting?: boolean;
+    selectedCount?: number;
+    allSelected?: boolean;
+    canSelect?: boolean;
+    deleting?: boolean;
+    onStartSelecting?: () => void;
+    onCancelSelecting?: () => void;
+    onToggleAll?: () => void;
+    onDeleteSelected?: () => void;
 } | {
     type: 'flat-session';
     row: FlatSessionRowData;
@@ -101,6 +114,37 @@ const stylesheet = StyleSheet.create((theme) => ({
         fontSize: 14,
         color: theme.colors.textSecondary,
         ...Typography.default('regular'),
+    },
+    // The toolbar half of the archive-toggle row. It keeps the row's height and
+    // band so flipping into selection mode does not shift the list underneath.
+    selectionToolbar: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    selectionToolbarButton: {
+        paddingVertical: 4,
+        paddingHorizontal: 4,
+        borderRadius: 8,
+    },
+    selectionToolbarText: {
+        fontSize: 14,
+        color: theme.colors.text,
+        ...Typography.default('regular'),
+    },
+    selectionToolbarSpacer: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    selectionDeleteDisabled: {
+        opacity: 0.4,
+    },
+    selectionDeleteText: {
+        fontSize: 14,
+        color: theme.colors.status.error,
+        ...Typography.default('semiBold'),
     },
     headerText: {
         fontSize: 14,
@@ -186,6 +230,12 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
     sessionItemSelected: {
         backgroundColor: theme.colors.surfaceSelected,
+    },
+    selectionCheckboxSlot: {
+        width: 22,
+        marginRight: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     sessionContent: {
         flex: 1,
@@ -275,8 +325,7 @@ const stylesheet = StyleSheet.create((theme) => ({
 const MachineHeader = React.memo(({ machineId, machineName }: {
     machineId: string | null;
     machineName: string;
-}) => {
-    const styles = stylesheet;
+}) => {    const styles = stylesheet;
     const { theme } = useUnistyles();
     const router = useRouter();
 
@@ -309,6 +358,110 @@ const MachineHeader = React.memo(({ machineId, machineName }: {
     );
 });
 
+/**
+ * The archive divider, which doubles as the bulk-delete toolbar.
+ *
+ * One row serves both jobs rather than the toolbar being a separate band, so
+ * opening selection mode does not push the archive down the screen while the
+ * user is aiming at the rows they just revealed.
+ */
+const ArchiveToggleRow = React.memo(({ item, onSetHidden }: {
+    item: Extract<SessionListDisplayItem, { type: 'archive-toggle' }>;
+    onSetHidden: (hidden: boolean) => void;
+}) => {
+    const styles = stylesheet;
+    const { theme } = useUnistyles();
+    const bandStyle = item.banded && styles.archiveToggleBanded;
+
+    if (item.selecting) {
+        const deleteDisabled = (item.selectedCount ?? 0) === 0 || !!item.deleting;
+        return (
+            <View style={[styles.archiveToggle, bandStyle]}>
+                <Pressable
+                    onPress={item.onCancelSelecting}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                        styles.selectionToolbarButton,
+                        pressed && styles.archiveTogglePressed,
+                    ]}
+                >
+                    <Text style={styles.selectionToolbarText}>{t('sidebar.cancelSelection')}</Text>
+                </Pressable>
+
+                <View style={styles.selectionToolbarSpacer}>
+                    {!!item.canSelect && (
+                        <Pressable
+                            onPress={item.onToggleAll}
+                            accessibilityRole="button"
+                            style={({ pressed }) => [
+                                styles.selectionToolbarButton,
+                                pressed && styles.archiveTogglePressed,
+                            ]}
+                        >
+                            <Text style={styles.selectionToolbarText}>
+                                {item.allSelected
+                                    ? t('sidebar.deselectAllArchived')
+                                    : t('sidebar.selectAllArchived')}
+                            </Text>
+                        </Pressable>
+                    )}
+                </View>
+
+                <Pressable
+                    onPress={item.onDeleteSelected}
+                    disabled={deleteDisabled}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: deleteDisabled }}
+                    style={({ pressed }) => [
+                        styles.selectionToolbarButton,
+                        deleteDisabled && styles.selectionDeleteDisabled,
+                        pressed && styles.archiveTogglePressed,
+                    ]}
+                >
+                    {item.deleting
+                        ? <ActivityIndicator size="small" color={theme.colors.status.error} />
+                        : (
+                            <Text style={styles.selectionDeleteText}>
+                                {t('sidebar.deleteSelected', { count: item.selectedCount ?? 0 })}
+                            </Text>
+                        )}
+                </Pressable>
+            </View>
+        );
+    }
+
+    return (
+        <View style={[styles.archiveToggle, bandStyle]}>
+            <View style={styles.archiveToggleLine} />
+            <Pressable
+                onPress={() => onSetHidden(!item.hidden)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: !item.hidden }}
+                style={({ pressed }) => [pressed && styles.archiveTogglePressed]}
+            >
+                <Text style={styles.archiveToggleText}>
+                    {item.hidden ? t('sidebar.showArchived') : t('sidebar.hideArchived')}
+                </Text>
+            </Pressable>
+            {!!item.canSelect && (
+                <Pressable
+                    onPress={item.onStartSelecting}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                        styles.selectionToolbarButton,
+                        pressed && styles.archiveTogglePressed,
+                    ]}
+                >
+                    <Text style={styles.selectionToolbarText}>
+                        {t('sidebar.selectArchived')}
+                    </Text>
+                </Pressable>
+            )}
+            <View style={styles.archiveToggleLine} />
+        </View>
+    );
+});
+
 export function SessionsList({
     topContentInset = 0,
     scrollIndicatorTopInset = 0,
@@ -323,6 +476,12 @@ export function SessionsList({
     const styles = stylesheet;
     const safeArea = useSafeAreaInsets();
     const sourceData = useVisibleSessionListViewData();
+    // The unfiltered list, used only to enumerate what a bulk delete may act on.
+    // `useVisibleSessionListViewData` strips archived rows when the archive is
+    // hidden, so collecting targets from it would report an empty selection in
+    // exactly the state where the user has not opened the archive yet — and the
+    // Select control would never appear.
+    const rawData = useSessionListViewData();
     const hasArchivedSessions = useHasArchivedSessions();
     // Stored under its original `hideInactiveSessions` key — synced settings
     // have no rename migration — but it hides archived sessions only.
@@ -334,6 +493,25 @@ export function SessionsList({
     const machines = useAllMachines();
     const pathname = usePathname();
     const isTablet = useIsTablet();
+
+    // Bulk delete acts on the archive's rows alone, read from the unfiltered
+    // list so the set of deletable sessions is the same whether or not the
+    // archive is currently revealed.
+    const archivedTargets = React.useMemo(
+        () => (rawData ? collectArchivedTargets(rawData) : []),
+        [rawData],
+    );
+    const bulkDelete = useArchiveBulkDelete(archivedTargets);
+    // Selection mode implies the archive is open: ticking rows the user cannot
+    // see would be a trap. This also covers the reverse race — the target list
+    // now survives a collapsed archive, so a selection that began while it was
+    // open can still be acted on from the toolbar after it was closed.
+    const archiveRevealed = !hideArchivedSessions;
+    React.useEffect(() => {
+        if (bulkDelete.selecting && !archiveRevealed) {
+            setHideArchivedSessions(false);
+        }
+    }, [archiveRevealed, bulkDelete.selecting, setHideArchivedSessions]);
     // Selection is derived once from pathname so the data array stays stable
     // across navigations. This keeps FlatList virtualization intact: only
     // the previously- and newly-selected rows re-render, instead of the
@@ -354,17 +532,36 @@ export function SessionsList({
     const data = React.useMemo<SessionListDisplayItem[] | null>(() => {
         if (!sourceData) return sourceData;
 
+        // Selection mode keeps the archive in front of the user even when the
+        // rest of the list is collapsed: its rows are in `sourceData` either
+        // way, but hiding it mid-selection would look like the delete failed.
+        const archiveVisible = !hideArchivedSessions || bulkDelete.selecting;
+
         // The archive is a flat, date-grouped tail rather than extra rows
         // inside the project cards, so the toggle is the divider that opens
         // it and always sits directly above those rows.
-        const archivedRows = sourceData.filter((item) => (
-            item.type === 'header' || item.type === 'session'
-        ));
+        const archivedRows = archiveVisible
+            ? sourceData.filter((item) => (
+                item.type === 'header' || item.type === 'session'
+            ))
+            : [];
         const groupedRows = sourceData.filter((item) => (
             item.type !== 'header' && item.type !== 'session'
         ));
         const archiveToggle: SessionListDisplayItem[] = hasArchivedSessions
-            ? [{ type: 'archive-toggle', hidden: hideArchivedSessions }]
+            ? [{
+                type: 'archive-toggle',
+                hidden: hideArchivedSessions,
+                selecting: bulkDelete.selecting,
+                selectedCount: bulkDelete.selectedCount,
+                allSelected: bulkDelete.allSelected,
+                canSelect: bulkDelete.canSelect,
+                deleting: bulkDelete.deleting,
+                onStartSelecting: bulkDelete.startSelecting,
+                onCancelSelecting: bulkDelete.cancelSelecting,
+                onToggleAll: bulkDelete.toggleAll,
+                onDeleteSelected: bulkDelete.requestDelete,
+            }]
             : [];
 
         if (flatSessionList) {
@@ -418,7 +615,22 @@ export function SessionsList({
             item.type !== 'project' && item.type !== 'projects-header'
         ));
         return [...legacyItems, ...hierarchy, ...archiveToggle, ...archivedRows];
-    }, [flatSessionList, hasArchivedSessions, hideArchivedSessions, machines, sourceData]);
+    }, [
+        bulkDelete.allSelected,
+        bulkDelete.canSelect,
+        bulkDelete.cancelSelecting,
+        bulkDelete.deleting,
+        bulkDelete.requestDelete,
+        bulkDelete.selecting,
+        bulkDelete.selectedCount,
+        bulkDelete.startSelecting,
+        bulkDelete.toggleAll,
+        flatSessionList,
+        hasArchivedSessions,
+        hideArchivedSessions,
+        machines,
+        sourceData,
+    ]);
 
     // Early return if no data yet
     if (!data) {
@@ -475,27 +687,21 @@ export function SessionsList({
                         selected={item.row.session.id === selectedSessionId}
                         showBorder={!item.last}
                         archived={item.archived}
+                        selection={item.archived && bulkDelete.selecting
+                            ? {
+                                checked: bulkDelete.selectedIds.has(item.row.session.id),
+                                onToggle: () => bulkDelete.toggle(item.row.session.id),
+                            }
+                            : undefined}
                     />
                 );
 
             case 'archive-toggle':
                 return (
-                    <Pressable
-                        onPress={() => setHideArchivedSessions(!item.hidden)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: !item.hidden }}
-                        style={({ pressed }) => [
-                            styles.archiveToggle,
-                            item.banded && styles.archiveToggleBanded,
-                            pressed && styles.archiveTogglePressed,
-                        ]}
-                    >
-                        <View style={styles.archiveToggleLine} />
-                        <Text style={styles.archiveToggleText}>
-                            {item.hidden ? t('sidebar.showArchived') : t('sidebar.hideArchived')}
-                        </Text>
-                        <View style={styles.archiveToggleLine} />
-                    </Pressable>
+                    <ArchiveToggleRow
+                        item={item}
+                        onSetHidden={setHideArchivedSessions}
+                    />
                 );
 
             case 'header':
@@ -561,10 +767,23 @@ export function SessionsList({
                         isFirst={isFirst}
                         isLast={isLast}
                         isSingle={isSingle}
+                        selection={bulkDelete.selecting
+                            ? {
+                                checked: bulkDelete.selectedIds.has(item.session.id),
+                                onToggle: () => bulkDelete.toggle(item.session.id),
+                            }
+                            : undefined}
                     />
                 );
         }
-    }, [selectedSessionId, data, flatSessionList]);
+    }, [
+        bulkDelete.selecting,
+        bulkDelete.selectedIds,
+        bulkDelete.toggle,
+        selectedSessionId,
+        data,
+        flatSessionList,
+    ]);
 
 
     // Remove this section as we'll use FlatList for all items now
@@ -619,16 +838,19 @@ const STATUS_CONFIG: Record<SessionState, { color: string; dotColor: string; isP
     input_required: { color: '#FF9500', dotColor: '#FF9500', isPulsing: true, isConnected: true },
 };
 
-const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle }: {
+const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle, selection }: {
     session: SessionRowData;
     selected?: boolean;
     isFirst?: boolean;
     isLast?: boolean;
     isSingle?: boolean;
+    /** Set only for archive rows while selection mode is open. */
+    selection?: { checked: boolean; onToggle: () => void };
 }) => {
     const styles = stylesheet;
     const sessionPressHandlers = useSessionPressHandlers(session.id);
     const [actionsAnchor, setActionsAnchor] = React.useState<SessionActionsAnchor | null>(null);
+    const selecting = !!selection;
     const baseStatus = STATUS_CONFIG[session.state];
     const needsUserAction = session.state === 'permission_required' || session.state === 'input_required';
     // User action stays orange and pulsing even when the request also marked the session unread.
@@ -664,9 +886,9 @@ const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle }
 
     const showActionAlert = useSessionActionAlert(session.id);
     const menuProps = Platform.OS === 'web' ? {
-        onContextMenu: handleContextMenu,
+        onContextMenu: selecting ? undefined : handleContextMenu,
     } as any : {
-        onLongPress: showActionAlert,
+        onLongPress: selecting ? selection?.onToggle : showActionAlert,
     };
 
     return (
@@ -684,9 +906,20 @@ const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle }
                     isFirst ? styles.sessionItemFirst :
                         isLast ? styles.sessionItemLast : {}
             ]}
-            {...sessionPressHandlers}
+            {...(selecting
+                ? {
+                    onPress: selection?.onToggle,
+                    accessibilityRole: 'checkbox' as const,
+                    accessibilityState: { checked: selection?.checked ?? false },
+                }
+                : sessionPressHandlers)}
             {...menuProps}
         >
+            {selecting && (
+                <View style={styles.selectionCheckboxSlot}>
+                    <SelectionCheckbox checked={selection?.checked ?? false} />
+                </View>
+            )}
             <View style={styles.avatarContainer}>
                 <Avatar bot={!!session.botId} id={session.avatarId} size={48} monochrome={!status.isConnected} flavor={session.flavor} clientId={session.clientId} imageUrl={session.avatarUri} thumbhash={session.avatarThumbhash} badgeLocation="sessionList" />
                 {session.hasDraft && (

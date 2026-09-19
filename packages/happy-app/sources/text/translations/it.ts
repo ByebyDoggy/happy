@@ -554,6 +554,17 @@ export const it: TranslationStructure = {
         hideArchived: 'Nascondi archiviate',
         newSession: 'Nuova sessione',
         projects: "Progetti",
+        selectArchived: 'Seleziona',
+        cancelSelection: 'Annulla',
+        selectAllArchived: 'Seleziona tutto',
+        deselectAllArchived: 'Deseleziona tutto',
+        deleteSelected: ({ count }: { count: number }) => `Elimina ${plural({ count, singular: 'sessione', plural: 'sessioni' })}`,
+        deleteArchivedTitle: 'Elimina sessioni archiviate',
+        deleteArchivedMessage: ({ count }: { count: number }) => `Eliminare definitivamente ${plural({ count, singular: 'questa sessione', plural: `${count} sessioni archiviate` })}? Le conversazioni, i messaggi e gli allegati vengono rimossi dal server e non possono essere recuperati.`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `${plural({ count, singular: 'È stato ignorato', plural: `Sono stati ignorati ${count}` })} ${plural({ count, singular: 'un bot', plural: 'bot' })} — un bot mantiene un'unica conversazione continua, quindi archivialo.`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `${plural({ count, singular: 'La sessione selezionata è un bot', plural: `Tutte le ${count} sessioni selezionate sono bot` })}. Un bot mantiene un'unica conversazione continua e non può essere eliminato — archivialo.`,
+        deleteArchivedPartialTitle: 'Alcune sessioni non sono state eliminate',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `Eliminate: ${deleted}; non riuscite: ${failed}.`,
     },
 
     zen: {

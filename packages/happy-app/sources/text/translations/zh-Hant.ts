@@ -556,6 +556,17 @@ export const zhHant: TranslationStructure = {
         hideArchived: '隱藏已封存',
         newSession: '新建對話',
         projects: "專案",
+        selectArchived: '選取',
+        cancelSelection: '取消',
+        selectAllArchived: '全選',
+        deselectAllArchived: '取消全選',
+        deleteSelected: ({ count }: { count: number }) => `刪除 ${count} 個對話`,
+        deleteArchivedTitle: '刪除已封存對話',
+        deleteArchivedMessage: ({ count }: { count: number }) => `將永久刪除 ${count} 個已封存對話。對話記錄、訊息和附件都會從伺服器上移除，無法復原。`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `已略過 ${count} 個 Bot — Bot 只保留一段連續對話，請改為封存。`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `所選 ${count} 個對話全部是 Bot。Bot 只保留一段連續對話，無法刪除 — 請改為封存。`,
+        deleteArchivedPartialTitle: '部分對話未能刪除',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `已刪除 ${deleted} 個，${failed} 個失敗。`,
     },
 
     zen: {

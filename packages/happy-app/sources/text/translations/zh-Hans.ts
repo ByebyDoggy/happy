@@ -557,6 +557,17 @@ export const zhHans: TranslationStructure = {
         hideArchived: '隐藏已归档',
         newSession: '新建会话',
         projects: "项目",
+        selectArchived: '选择',
+        cancelSelection: '取消',
+        selectAllArchived: '全选',
+        deselectAllArchived: '取消全选',
+        deleteSelected: ({ count }: { count: number }) => `删除 ${count} 个会话`,
+        deleteArchivedTitle: '删除已归档会话',
+        deleteArchivedMessage: ({ count }: { count: number }) => `将永久删除 ${count} 个已归档会话。对话记录、消息和附件都会从服务器上移除，无法恢复。`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `已跳过 ${count} 个 Bot — Bot 只保留一段连续对话，请改为归档。`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `所选 ${count} 个会话全部是 Bot。Bot 只保留一段连续对话，无法删除 — 请改为归档。`,
+        deleteArchivedPartialTitle: '部分会话未能删除',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `已删除 ${deleted} 个，${failed} 个失败。`,
     },
 
     zen: {

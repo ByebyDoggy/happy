@@ -7,6 +7,7 @@ import { Text } from '@/components/StyledText';
 import { Typography } from '@/constants/Typography';
 import { Avatar } from './Avatar';
 import { StatusDot } from './StatusDot';
+import { SelectionCheckbox } from './SelectionCheckbox';
 import { SessionActionsAnchor, SessionActionsPopover } from './SessionActionsPopover';
 import { SessionShortcutHintBadge } from './ShortcutHints';
 import { useSessionPressHandlers } from '@/hooks/useNavigateToSession';
@@ -47,12 +48,18 @@ export function flatListBackgroundColor(theme: Theme): string {
  * with a hairline under it, so the list reads as one continuous column rather
  * than a stack of project cards.
  */
-export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived }: {
+export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived, selection }: {
     row: FlatSessionRowData;
     selected?: boolean;
     showBorder?: boolean;
     /** Retired work: the same row, faded back and drained of avatar colour. */
     archived?: boolean;
+    /**
+     * Present only while the archive is in selection mode. The row then trades
+     * its navigation and swipe gestures for a tick, so a tap is unambiguous:
+     * opening a session mid-selection would hide the selection behind it.
+     */
+    selection?: { checked: boolean; onToggle: () => void };
 }) => {
     const { session, projectName, workspaceName } = row;
     const styles = stylesheet;
@@ -61,6 +68,7 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
     const swipeableRef = React.useRef<Swipeable | null>(null);
     const swipeEnabled = Platform.OS !== 'web';
     const [actionsAnchor, setActionsAnchor] = React.useState<SessionActionsAnchor | null>(null);
+    const selecting = !!selection;
 
     // Greying out is about the machine, not the session's own socket. A session
     // idle since yesterday on a machine that is still up is ordinary work you
@@ -128,18 +136,32 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
     }, []);
 
     const showActionAlert = useSessionActionAlert(session.id);
+    // Long-press opens the action sheet everywhere else. In selection mode it
+    // is a second way to tick the row, matching the gesture people already use
+    // to start a multi-select in a chat list.
     const menuProps = Platform.OS === 'web' ? {
-        onContextMenu: handleContextMenu,
+        onContextMenu: selecting ? undefined : handleContextMenu,
     } as any : {
-        onLongPress: showActionAlert,
+        onLongPress: selecting ? selection?.onToggle : showActionAlert,
     };
 
     const content = (
         <Pressable
             style={[styles.row, selected && styles.rowSelected]}
-            {...sessionPressHandlers}
+            {...(selecting
+                ? {
+                    onPress: selection?.onToggle,
+                    accessibilityRole: 'checkbox' as const,
+                    accessibilityState: { checked: selection?.checked ?? false },
+                }
+                : sessionPressHandlers)}
             {...menuProps}
         >
+            {selecting && (
+                <View style={styles.checkboxSlot}>
+                    <SelectionCheckbox checked={selection?.checked ?? false} />
+                </View>
+            )}
             <View style={[styles.avatar, faded && styles.avatarFaded]}>
                 <Avatar
                     bot={!!session.botId}
@@ -267,7 +289,10 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
             ref={swipeableRef}
             renderRightActions={renderRightActions}
             overshootRight={false}
-            enabled={!archiving}
+            // A swipe here would delete nothing but would still drag the row
+            // sideways under the finger ticking it, so selection mode turns the
+            // gesture off entirely.
+            enabled={!archiving && !selecting}
         >
             {content}
         </Swipeable>
@@ -288,6 +313,14 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
     rowSelected: {
         backgroundColor: theme.colors.surfaceSelected,
+    },
+    // Left of the avatar, mirroring the right-hand padding, so the avatar keeps
+    // its position and the list does not shift when selection mode opens.
+    checkboxSlot: {
+        width: 22,
+        marginRight: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     avatar: {
         width: AVATAR_SIZE,

@@ -572,6 +572,17 @@ export const pl: TranslationStructure = {
         hideArchived: 'Ukryj zarchiwizowane',
         newSession: 'Nowa sesja',
         projects: "Projekty",
+        selectArchived: 'Wybierz',
+        cancelSelection: 'Anuluj',
+        selectAllArchived: 'Wybierz wszystkie',
+        deselectAllArchived: 'Odznacz wszystkie',
+        deleteSelected: ({ count }: { count: number }) => `Usuń ${count} ${plural({ count, one: 'sesję', few: 'sesje', many: 'sesji' })}`,
+        deleteArchivedTitle: 'Usuń zarchiwizowane sesje',
+        deleteArchivedMessage: ({ count }: { count: number }) => `Trwale usunąć ${count} ${plural({ count, one: 'zarchiwizowaną sesję', few: 'zarchiwizowane sesje', many: 'zarchiwizowanych sesji' })}? Rozmowy, wiadomości i załączniki zostaną usunięte z serwera i nie będzie można ich odzyskać.`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `Pominięto ${count} ${plural({ count, one: 'bota', few: 'boty', many: 'botów' })} — bot prowadzi jedną ciągłą rozmowę, więc zamiast tego zarchiwizuj go.`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `Wszystkie wybrane sesje (${count}) to boty. Bot prowadzi jedną ciągłą rozmowę i nie można go usunąć — zarchiwizuj go zamiast tego.`,
+        deleteArchivedPartialTitle: 'Niektóre sesje nie zostały usunięte',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `Usunięto: ${deleted}; nie udało się: ${failed}.`,
     },
 
     zen: {

@@ -47,6 +47,13 @@ const stylesheet = StyleSheet.create((theme) => ({
         minHeight: 120,
         textAlignVertical: 'top',
         color: theme.colors.input.text,
+        marginBottom: 16,
+    },
+    migrationNote: {
+        ...Typography.default(),
+        fontSize: 13,
+        lineHeight: 18,
+        color: theme.colors.textSecondary,
         marginBottom: 24,
     },
 }));
@@ -120,6 +127,11 @@ export default function Restore() {
                         multiline={true}
                         numberOfLines={4}
                     />
+
+                    {/* The most common worry here is that restoring will sign
+                        the other phone out. It does not, and saying so up front
+                        is cheaper than answering it afterwards. */}
+                    <Text style={styles.migrationNote}>{t('onboarding.secretKeyMigrationNote')}</Text>
 
                     <RoundButton
                         title={t('onboarding.restoreButton')}

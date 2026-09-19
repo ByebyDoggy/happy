@@ -557,6 +557,17 @@ export const ja: TranslationStructure = {
         hideArchived: 'アーカイブを非表示',
         newSession: '新しいセッション',
         projects: "プロジェクト",
+        selectArchived: '選択',
+        cancelSelection: 'キャンセル',
+        selectAllArchived: 'すべて選択',
+        deselectAllArchived: '選択を解除',
+        deleteSelected: ({ count }: { count: number }) => `${count} 件のセッションを削除`,
+        deleteArchivedTitle: 'アーカイブ済みセッションを削除',
+        deleteArchivedMessage: ({ count }: { count: number }) => `アーカイブ済みの ${count} 件のセッションを完全に削除しますか？会話、メッセージ、添付ファイルはサーバーから削除され、復元できません。`,
+        deleteArchivedBotsKept: ({ count }: { count: number }) => `${count} 件の Bot はそのままにしました — Bot は 1 つの会話を継続するため、代わりにアーカイブしてください。`,
+        deleteArchivedAllBots: ({ count }: { count: number }) => `選択した ${count} 件のセッションはすべて Bot です。Bot は 1 つの会話を継続するため削除できません — 代わりにアーカイブしてください。`,
+        deleteArchivedPartialTitle: '一部のセッションを削除できませんでした',
+        deleteArchivedPartialMessage: ({ deleted, failed }: { deleted: number; failed: number }) => `削除: ${deleted} 件、失敗: ${failed} 件。`,
     },
 
     zen: {
