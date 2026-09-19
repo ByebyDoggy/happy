@@ -210,6 +210,22 @@ export const es: TranslationStructure = {
         avatarMonochromeDescription: 'Mostrar los avatares sin color',
     },
 
+    sessionCategories: {
+        title: 'Categorías',
+        all: 'Todas',
+        uncategorised: 'Sin categoría',
+        create: 'Nueva categoría',
+        rename: 'Renombrar',
+        createChild: 'Nueva subcategoría',
+        delete: 'Eliminar categoría',
+        nameLabel: 'Nombre',
+        moveTo: 'Mover a categoría',
+        none: 'Sin categoría',
+        deleteTitle: '¿Eliminar la categoría?',
+        deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `Se eliminarán ${categories} categorías y ${sessions} sesiones volverán a Sin categoría. Las sesiones no se eliminan.`,
+        deleteConfirm: 'Eliminar',
+    },
+
     sessionsFilter: {
         // Filter menu on the home sessions list header
         title: 'Filtro',

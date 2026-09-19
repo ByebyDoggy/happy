@@ -211,6 +211,22 @@ export const ja: TranslationStructure = {
         avatarMonochromeDescription: 'アバターを色なしで表示',
     },
 
+    sessionCategories: {
+        title: 'カテゴリ',
+        all: 'すべて',
+        uncategorised: '未分類',
+        create: '新しいカテゴリ',
+        rename: '名前を変更',
+        createChild: 'サブカテゴリを追加',
+        delete: 'カテゴリを削除',
+        nameLabel: '名前',
+        moveTo: 'カテゴリへ移動',
+        none: 'カテゴリなし',
+        deleteTitle: 'カテゴリを削除しますか？',
+        deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `${categories} 件のカテゴリを削除し、${sessions} 件のセッションが未分類に戻ります。セッション自体は削除されません。`,
+        deleteConfirm: '削除',
+    },
+
     sessionsFilter: {
         // Filter menu on the home sessions list header
         title: 'フィルター',

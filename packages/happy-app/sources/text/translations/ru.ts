@@ -194,6 +194,22 @@ export const ru: TranslationStructure = {
         avatarMonochromeDescription: 'Отображать аватары без цвета',
     },
 
+    sessionCategories: {
+        title: 'Категории',
+        all: 'Все',
+        uncategorised: 'Без категории',
+        create: 'Новая категория',
+        rename: 'Переименовать',
+        createChild: 'Новая подкатегория',
+        delete: 'Удалить категорию',
+        nameLabel: 'Название',
+        moveTo: 'Переместить в категорию',
+        none: 'Без категории',
+        deleteTitle: 'Удалить категорию?',
+        deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `Будет удалено категорий: ${categories}, ${sessions} сессий вернутся в «Без категории». Сами сессии не удаляются.`,
+        deleteConfirm: 'Удалить',
+    },
+
     sessionsFilter: {
         // Filter menu on the home sessions list header
         title: 'Фильтр',

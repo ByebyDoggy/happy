@@ -224,6 +224,24 @@ export const en: TranslationStructure = {
         avatarMonochromeDescription: 'Render avatars without color',
     },
 
+    sessionCategories: {
+        // Category chips above the session list
+        title: 'Categories',
+        all: 'All',
+        uncategorised: 'Uncategorised',
+        create: 'New category',
+        rename: 'Rename',
+        createChild: 'New sub-category',
+        delete: 'Delete category',
+        nameLabel: 'Name',
+        moveTo: 'Move to category',
+        none: 'No category',
+        deleteTitle: 'Delete category?',
+        deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) =>
+            `This removes ${categories} ${categories === 1 ? 'category' : 'categories'}, and ${sessions} ${sessions === 1 ? 'session' : 'sessions'} will return to Uncategorised. The sessions themselves are not deleted.`,
+        deleteConfirm: 'Delete',
+    },
+
     sessionsFilter: {
         // Filter menu on the home sessions list header
         title: 'Filter',

@@ -367,4 +367,81 @@ export function collectSubtreeIds(
     return [categoryId, ...getDescendantIds(tree.categories, categoryId)];
 }
 
+/** The order a newly created sibling should take: after every existing one. */
+export function nextSiblingOrder(
+    tree: SessionCategoryTree,
+    parentId: string | null,
+): number {
+    const siblings = tree.categories.filter(category => category.parentId === parentId);
+    if (siblings.length === 0) {
+        return 0;
+    }
+    return Math.max(...siblings.map(category => category.order)) + 1;
+}
+
+/**
+ * Builds a category ready to add, with its position among siblings filled in.
+ *
+ * The id is passed in rather than generated here so this stays pure and
+ * testable; the caller owns the source of ids.
+ */
+export function makeCategory(
+    tree: SessionCategoryTree,
+    params: { id: string; name: string; parentId: string | null },
+): SessionCategory {
+    return {
+        id: params.id,
+        name: params.name,
+        parentId: params.parentId,
+        order: nextSiblingOrder(tree, params.parentId),
+    };
+}
+
+export interface CategoryDeletionImpact {
+    /** Categories removed, the target included. Zero if it is already gone. */
+    categoryCount: number;
+    /** Sessions that lose their label and return to the uncategorised list. */
+    affectedSessionCount: number;
+}
+
+/**
+ * What deleting a category would destroy, for the confirmation the user reads
+ * before it happens. The session count is the number the dialog needs and the
+ * one the tree cannot show on its own: categories hold no sessions, they only
+ * label them.
+ */
+export function describeCategoryDeletion(
+    tree: SessionCategoryTree,
+    categoryId: string,
+): CategoryDeletionImpact {
+    if (!tree.categories.some(category => category.id === categoryId)) {
+        return { categoryCount: 0, affectedSessionCount: 0 };
+    }
+
+    const removed = new Set(collectSubtreeIds(tree, categoryId));
+    let affectedSessionCount = 0;
+    for (const assignedId of Object.values(tree.assignments)) {
+        if (removed.has(assignedId)) {
+            affectedSessionCount += 1;
+        }
+    }
+
+    return { categoryCount: removed.size, affectedSessionCount };
+}
+
+/**
+ * Moves a session to a category, or clears it.
+ *
+ * A thin alias of `assignSessionToCategory`, kept because the UI's "move to
+ * category" action and the data layer's "set assignment" should read as the
+ * same operation — the one-category-per-session rule lives in that function.
+ */
+export function reassignSession(
+    tree: SessionCategoryTree,
+    sessionId: string,
+    categoryId: string | null,
+): SessionCategoryTree {
+    return assignSessionToCategory(tree, sessionId, categoryId);
+}
+
 export { EMPTY_SESSION_CATEGORY_TREE };

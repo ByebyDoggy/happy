@@ -6,11 +6,15 @@ import {
     canMoveCategory,
     collectSubtreeIds,
     deleteCategory,
+    describeCategoryDeletion,
     getCategoryDepth,
     getCategoryPath,
     getDescendantIds,
+    makeCategory,
     moveCategory,
+    nextSiblingOrder,
     pruneSessionAssignments,
+    reassignSession,
     renameCategory,
     sanitizeSessionCategoryTree,
     setCategoryOrder,
@@ -363,6 +367,90 @@ describe('getCategoryPath', () => {
 describe('collectSubtreeIds', () => {
     it('includes the category itself', () => {
         expect(collectSubtreeIds(SAMPLE, 'game').sort()).toEqual(['game', 'game-2d', 'game-3d']);
+    });
+});
+
+describe('nextSiblingOrder', () => {
+    it('starts a new root at zero', () => {
+        expect(nextSiblingOrder(tree([]), null)).toBe(0);
+    });
+
+    it('follows the highest existing sibling', () => {
+        const existing = tree([category('a', null, 3), category('b', null, 7)]);
+
+        expect(nextSiblingOrder(existing, null)).toBe(8);
+    });
+
+    it('counts only siblings under the same parent', () => {
+        // `web` is a root at order 1; a new child of `game` must not inherit it.
+        expect(nextSiblingOrder(SAMPLE, 'game')).toBe(2);
+    });
+
+    it('starts the first child at zero even when the parent has siblings', () => {
+        const existing = tree([category('a', null, 9)]);
+
+        expect(nextSiblingOrder(existing, 'a')).toBe(0);
+    });
+});
+
+describe('makeCategory', () => {
+    it('fills in the order after the last sibling', () => {
+        const created = makeCategory(SAMPLE, { id: 'new', name: 'New', parentId: 'game' });
+
+        expect(created).toEqual({ id: 'new', name: 'New', parentId: 'game', order: 2 });
+    });
+
+    it('produces a category that can be added', () => {
+        const created = makeCategory(SAMPLE, { id: 'new', name: 'New', parentId: null });
+        const next = addCategory(SAMPLE, created);
+
+        expect(next.categories.map(c => c.id)).toContain('new');
+    });
+});
+
+describe('describeCategoryDeletion', () => {
+    it('counts the subtree and the sessions it labels', () => {
+        // game holds s3, game-2d holds s1 and s2 — three sessions, three nodes.
+        expect(describeCategoryDeletion(SAMPLE, 'game')).toEqual({
+            categoryCount: 3,
+            affectedSessionCount: 3,
+        });
+    });
+
+    it('counts only the target when it is a leaf', () => {
+        expect(describeCategoryDeletion(SAMPLE, 'game-2d')).toEqual({
+            categoryCount: 1,
+            affectedSessionCount: 2,
+        });
+    });
+
+    it('reports zero for a category that is already gone', () => {
+        expect(describeCategoryDeletion(SAMPLE, 'missing')).toEqual({
+            categoryCount: 0,
+            affectedSessionCount: 0,
+        });
+    });
+
+    it('reports a category with nothing filed under it', () => {
+        const bare = tree([category('empty')]);
+
+        expect(describeCategoryDeletion(bare, 'empty')).toEqual({
+            categoryCount: 1,
+            affectedSessionCount: 0,
+        });
+    });
+});
+
+describe('reassignSession', () => {
+    it('files a session and keeps it in one place', () => {
+        const moved = reassignSession(SAMPLE, 's1', 'web');
+
+        expect(moved.assignments.s1).toBe('web');
+        expect(reassignSession(moved, 's1', 'game').assignments.s1).toBe('game');
+    });
+
+    it('clears the assignment when given null', () => {
+        expect(reassignSession(SAMPLE, 's1', null).assignments.s1).toBeUndefined();
     });
 });
 

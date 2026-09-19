@@ -211,6 +211,22 @@ export const zhHans: TranslationStructure = {
         avatarMonochromeDescription: '不带颜色显示头像',
     },
 
+    sessionCategories: {
+        title: '分类',
+        all: '全部',
+        uncategorised: '未分类',
+        create: '新建分类',
+        rename: '重命名',
+        createChild: '新建子分类',
+        delete: '删除分类',
+        nameLabel: '名称',
+        moveTo: '移动到分类',
+        none: '无分类',
+        deleteTitle: '删除分类？',
+        deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `将删除 ${categories} 个分类，其中 ${sessions} 个会话会回到未分类。会话本身不会被删除。`,
+        deleteConfirm: '确定删除',
+    },
+
     sessionsFilter: {
         // Filter menu on the home sessions list header
         title: '筛选',

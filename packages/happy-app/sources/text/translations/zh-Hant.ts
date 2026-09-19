@@ -210,6 +210,22 @@ export const zhHant: TranslationStructure = {
         avatarMonochromeDescription: '不帶顏色顯示頭像',
     },
 
+    sessionCategories: {
+        title: '分類',
+        all: '全部',
+        uncategorised: '未分類',
+        create: '新建分類',
+        rename: '重新命名',
+        createChild: '新建子分類',
+        delete: '刪除分類',
+        nameLabel: '名稱',
+        moveTo: '移動到分類',
+        none: '無分類',
+        deleteTitle: '刪除分類？',
+        deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `將刪除 ${categories} 個分類，其中 ${sessions} 個對話會回到未分類。對話本身不會被刪除。`,
+        deleteConfirm: '確定刪除',
+    },
+
     sessionsFilter: {
         // Filter menu on the home sessions list header
         title: '篩選',
