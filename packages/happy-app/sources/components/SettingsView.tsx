@@ -14,7 +14,7 @@ import { ItemList } from '@/components/ItemList';
 import { useConnectTerminal } from '@/hooks/useConnectTerminal';
 import { useEntitlement, useLocalSettingMutable, useSetting } from '@/sync/storage';
 import { sync } from '@/sync/sync';
-import { isUsingCustomServer } from '@/sync/serverConfig';
+import { isUsingCustomServer, getServerInfo } from '@/sync/serverConfig';
 import { trackPaywallButtonClicked, trackWhatsNewClicked } from '@/track';
 import { Modal } from '@/modal';
 import { useMultiClick } from '@/hooks/useMultiClick';
@@ -342,6 +342,15 @@ export const SettingsView = React.memo(function SettingsView({
                     subtitle="Connected machines and agent defaults"
                     icon={<Ionicons name="options-outline" size={29} color="#5AC8FA" />}
                     onPress={() => router.push('/settings/agents' as any)}
+                />
+                {/* Always reachable. The header shortcut to /server only appears
+                    once a custom server is already in use, which left no way in
+                    for anyone on the default server. */}
+                <Item
+                    title="Server"
+                    subtitle={getServerInfo().hostname}
+                    icon={<Ionicons name="server-outline" size={29} color="#FF9500" />}
+                    onPress={() => router.push('/server' as any)}
                 />
                 {experiments && (
                     <Item

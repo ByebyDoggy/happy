@@ -185,13 +185,17 @@ export function getCodexModelModes(): ModelMode[] {
     ];
 }
 
+// Claude joins Codex and agy here so a model the app does not ship a row for
+// can still be selected: third-party relays and self-hosted gateways serve
+// model IDs that will never appear in a hardcoded list. The value is passed to
+// the CLI verbatim as `--model <key>`.
 export function includeConfiguredModel(
     flavor: AgentFlavor,
     models: ModelMode[],
     configuredModelKey: string | null | undefined,
 ): ModelMode[] {
     if (
-        (flavor !== 'codex' && flavor !== 'agy')
+        (flavor !== 'codex' && flavor !== 'agy' && flavor !== 'claude')
         || !configuredModelKey
         || configuredModelKey === 'default'
         || models.some((model) => model.key === configuredModelKey)

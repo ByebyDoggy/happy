@@ -81,10 +81,13 @@ export default function AgentsSettingsScreen() {
         setAgentDefaultOverrides(setAgentDefaultOverride(agentDefaultOverrides, agent, field, value));
     }, [agentDefaultOverrides, setAgentDefaultOverrides]);
 
-    const editCustomCodexModel = React.useCallback(async (currentValue?: string) => {
+    // Shared by Codex and Claude: both pass the key straight through to their
+    // CLI as `--model <key>`, so the only difference is the wording.
+    const editCustomModel = React.useCallback(async (agent: AgentKey, currentValue?: string) => {
+        const label = agent === 'claude' ? 'Claude' : 'Codex';
         const value = await Modal.prompt(
-            'Custom Codex model',
-            'Enter an exact model ID. Availability depends on your Codex account or API configuration.',
+            `Custom ${label} model`,
+            'Enter an exact model ID. Availability depends on the provider your CLI is configured for.',
             {
                 defaultValue: currentValue ?? '',
                 placeholder: 'model-id',
@@ -93,7 +96,7 @@ export default function AgentsSettingsScreen() {
         );
         const model = value?.trim();
         if (model) {
-            updateOverride('codex', 'modelMode', model);
+            updateOverride(agent, 'modelMode', model);
         }
     }, [updateOverride]);
 
@@ -127,7 +130,7 @@ export default function AgentsSettingsScreen() {
             ? optionName(config.options, overrideValue)
             : `Default (${optionName(config.options, effectiveValue)})`;
         const codeDefaultLabel = optionName(config.options, config.codeDefaultKey);
-        const isCustomCodexModel = agent === 'codex'
+        const isCustomModel = (agent === 'codex' || agent === 'claude')
             && config.field === 'modelMode'
             && Boolean(overrideValue)
             && !config.options.some((option) => option.key === overrideValue);
@@ -158,13 +161,13 @@ export default function AgentsSettingsScreen() {
                             hasOverride && overrideValue === option.key,
                             option.key,
                         ))}
-                        {agent === 'codex' && config.field === 'modelMode' && (
+                        {(agent === 'codex' || agent === 'claude') && config.field === 'modelMode' && (
                             <Item
                                 title="Custom model…"
-                                subtitle={isCustomCodexModel ? overrideValue : 'Enter an exact model ID'}
-                                onPress={() => editCustomCodexModel(isCustomCodexModel ? overrideValue : undefined)}
+                                subtitle={isCustomModel ? overrideValue : 'Enter an exact model ID'}
+                                onPress={() => editCustomModel(agent, isCustomModel ? overrideValue : undefined)}
                                 showChevron={false}
-                                rightElement={isCustomCodexModel ? (
+                                rightElement={isCustomModel ? (
                                     <Ionicons name="checkmark" size={20} color={theme.colors.header.tint} />
                                 ) : undefined}
                             />
