@@ -6,6 +6,12 @@ import { AuthCredentials } from '@/auth/tokenStorage';
 import { Encryption } from '@/sync/encryption/encryption';
 import { decodeBase64, encodeBase64 } from '@/encryption/base64';
 import { storage } from './storage';
+import {
+    ensureSessionCategories,
+    loadSessionCategories,
+    saveSessionCategories,
+} from './apiSessionCategories';
+import { SESSION_CATEGORIES_KV_KEY, type SessionCategoryTree } from './sessionCategories';
 // Circular at module level (ops.ts imports sync) but safe: both sides only
 // touch each other's exports at runtime, never during module initialization.
 import { sessionSetAgentModes } from './ops';
@@ -145,6 +151,7 @@ class Sync {
     public encryptionCache = new EncryptionCache();
     private sessionsSync: InvalidateSync;
     private projectsSync: InvalidateSync;
+    private sessionCategoriesSync: InvalidateSync;
     private messagesSync = new Map<string, InvalidateSync>();
     private messagePreloader = new SessionMessagePreloader((sessionId, signal) => this.preloadLatestPage(sessionId, signal));
     private historyPrefetchSessions = new Set<string>();
@@ -208,6 +215,7 @@ class Sync {
     constructor() {
         this.sessionsSync = new InvalidateSync(this.fetchSessions);
         this.projectsSync = new InvalidateSync(this.fetchProjects);
+        this.sessionCategoriesSync = new InvalidateSync(this.fetchSessionCategories);
         this.settingsSync = new InvalidateSync(this.syncSettings);
         this.profileSync = new InvalidateSync(this.fetchProfile);
         this.purchasesSync = new InvalidateSync(this.syncPurchases);
@@ -348,6 +356,10 @@ class Sync {
         this.friendRequestsSync.invalidate();
         this.artifactsSync.invalidate();
         this.feedSync.invalidate();
+        // Categories are one KV record, and the sidebar renders without them,
+        // so this rides along with the other catalog fetches rather than
+        // blocking the ready signal below.
+        this.sessionCategoriesSync.invalidate();
         log.log('🔄 #init: All syncs invalidated, including artifacts');
 
         // Mark UI ready as soon as sessions load. Machines sync may hang
@@ -1168,6 +1180,94 @@ class Sync {
             }
         }
     };
+
+    private sessionCategoriesVersion = -1;
+
+    private fetchSessionCategories = async (): Promise<void> => {
+        if (!this.credentials) return;
+
+        const loaded = await loadSessionCategories(this.credentials);
+        this.sessionCategoriesVersion = loaded?.version ?? -1;
+
+        if (loaded) {
+            storage.getState().applySessionCategories(loaded.tree);
+            return;
+        }
+
+        // No record yet. Create it once so this device has a version to write
+        // against, then publish the empty tree so the sidebar stops waiting.
+        const created = await ensureSessionCategories(this.credentials).catch(() => null);
+        if (!created) {
+            // Offline or the write failed; leave the tree unloaded so the next
+            // invalidate retries rather than claiming an empty account.
+            return;
+        }
+        this.sessionCategoriesVersion = created.version;
+        storage.getState().applySessionCategories(created.tree);
+    };
+
+    /**
+     * Applies an edit to the category tree and writes it back.
+     *
+     * The transform runs against the tree the store currently holds, then the
+     * result is written at the version this device last read. If another device
+     * wrote in between, the KV version check refuses the write and this returns
+     * the conflicting tree without applying anything — the user, not this
+     * function, decides whose edit survives.
+     */
+    public async updateSessionCategories(
+        transform: (tree: SessionCategoryTree) => SessionCategoryTree,
+    ): Promise<{ ok: true } | { ok: false; reason: 'version-mismatch' } | { ok: false; reason: 'not-loaded' }> {
+        if (!this.credentials) {
+            return { ok: false, reason: 'not-loaded' };
+        }
+        if (!storage.getState().sessionCategoriesLoaded) {
+            // Writing now would be a read-modify-write against a tree this
+            // device has never seen, discarding whatever the account holds.
+            return { ok: false, reason: 'not-loaded' };
+        }
+
+        const next = transform(storage.getState().sessionCategories);
+        const result = await saveSessionCategories(
+            this.credentials,
+            next,
+            this.sessionCategoriesVersion,
+        );
+
+        if (!result.ok) {
+            if (result.current) {
+                this.sessionCategoriesVersion = result.current.version;
+                storage.getState().applySessionCategories(result.current.tree);
+            }
+            return { ok: false, reason: 'version-mismatch' };
+        }
+
+        this.sessionCategoriesVersion = result.version;
+        storage.getState().applySessionCategories(next);
+        return { ok: true };
+    };
+
+    /**
+     * Drops a deleted session's category assignment.
+     *
+     * Fire-and-forget: the session is already gone locally, and a failed write
+     * only means a stale count until the next sync. Blocking the delete on a
+     * KV round trip would make removing a session feel slow.
+     */
+    private pruneCategoriesForDeletedSession(sessionId: string): void {
+        // `sessionCategories` is absent in the lighter storage stubs the sync
+        // tests build, where this path runs without a category tree at all.
+        if (!storage.getState().sessionCategories?.assignments?.[sessionId]) {
+            return;
+        }
+        void this.updateSessionCategories(tree => {
+            const assignments = { ...tree.assignments };
+            delete assignments[sessionId];
+            return { ...tree, assignments };
+        }).catch((error) => {
+            console.error('Failed to drop the deleted session’s category', error);
+        });
+    }
 
     private fetchProjects = async (): Promise<void> => {
         if (!this.credentials) return;
@@ -2661,6 +2761,12 @@ class Sync {
             // Remove session from storage
             storage.getState().deleteSession(sessionId);
 
+            // A deleted session must stop counting toward a category's total.
+            // Categories live in KV and know nothing about sessions, so this is
+            // the one place the two are reconciled on the delete path — the
+            // bulk-delete flow arrives here as one event per session.
+            this.pruneCategoriesForDeletedSession(sessionId);
+
             // Remove encryption keys from memory
             this.encryption.removeSessionEncryption(sessionId);
 
@@ -2775,6 +2881,15 @@ class Sync {
             if (updateData.body.t === 'delete-project') {
                 // Deletion also nulls the server-side session link.
                 this.sessionsSync.invalidate();
+            }
+        } else if (updateData.body.t === 'kv-batch-update') {
+            // Any KV write the account makes arrives here, including our own
+            // echoed back. Only a change to the category record is ours to
+            // care about; re-reading is cheap and keeps the local version in
+            // step with whatever another device just wrote.
+            if (updateData.body.changes.some(change => change.key === SESSION_CATEGORIES_KV_KEY)) {
+                log.log('🏷️ category record changed, re-reading');
+                this.sessionCategoriesSync.invalidate();
             }
         } else if (updateData.body.t === 'update-account') {
             const accountUpdate = updateData.body;

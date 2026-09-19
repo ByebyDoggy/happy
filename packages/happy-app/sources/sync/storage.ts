@@ -8,6 +8,11 @@ import type { GitStatusFiles } from "./gitStatusFiles";
 import type { ProjectFilesList } from "./projectFiles";
 import { buildPathProjectGroups, buildProjectGroups, isProjectSession, type ProjectGroupData } from "./projectGroups";
 import {
+    EMPTY_SESSION_CATEGORY_TREE,
+    type SessionCategoryTree,
+} from "./sessionCategories";
+import { pruneSessionAssignments } from "./sessionCategoryOps";
+import {
     selectAgentFormCommunication,
     selectPendingCommunications,
     type PendingAgentCommunication,
@@ -267,6 +272,14 @@ interface StorageState {
     sessionFileCache: Record<string, Record<string, { content: string | null; diff: string | null; isBinary: boolean; cachedAt: number }>>;
     machines: Record<string, Machine>;
     projects: Record<string, Project>;
+    /**
+     * User-defined session categories, synced through the account KV store.
+     * Held whole rather than as a record-of-entities: it is one document with
+     * one version, so a partial merge has no meaning.
+     */
+    sessionCategories: SessionCategoryTree;
+    /** False until the KV record has been read once, so the sidebar can wait. */
+    sessionCategoriesLoaded: boolean;
     artifacts: Record<string, DecryptedArtifact>;  // New artifacts storage
     friends: Record<string, UserProfile>;  // All relationships (friends, pending, requested, etc.)
     users: Record<string, UserProfile | null>;  // Global user cache, null = 404/failed fetch
@@ -288,6 +301,12 @@ interface StorageState {
     applyMachines: (machines: Machine[], replace?: boolean) => void;
     applyProjects: (projects: Project[], replace?: boolean) => void;
     applyProjectAvatar: (projectId: string, avatar: Project['avatar']) => void;
+    /**
+     * Replaces the whole category tree. The caller owns the read-modify-write
+     * against KV, so this never merges — two devices editing at once is
+     * resolved by the KV version check, not by field-level merging.
+     */
+    applySessionCategories: (tree: SessionCategoryTree) => void;
     deleteMachine: (machineId: string) => void;
     applyLoaded: () => void;
     applyReady: () => void;
@@ -470,6 +489,8 @@ export const storage = create<StorageState>()((set, get) => {
         sessions: {},
         machines: {},
         projects: {},
+        sessionCategories: EMPTY_SESSION_CATEGORY_TREE,
+        sessionCategoriesLoaded: false,
         artifacts: {},  // Initialize artifacts
         friends: {},  // Initialize relationships cache
         users: {},  // Initialize global user cache
@@ -1291,6 +1312,19 @@ export const storage = create<StorageState>()((set, get) => {
                     state.machines,
                     mergedProjects,
                 ),
+            };
+        }),
+        applySessionCategories: (tree: SessionCategoryTree) => set((state) => {
+            // Drop assignments for sessions that no longer exist before the
+            // tree lands, so a category count never includes a deleted session.
+            // Bulk delete knows nothing about categories; this is where the two
+            // meet.
+            const liveSessionIds = new Set(Object.keys(state.sessions));
+            const pruned = pruneSessionAssignments(tree, liveSessionIds);
+            return {
+                ...state,
+                sessionCategories: pruned,
+                sessionCategoriesLoaded: true,
             };
         }),
         applyProjectAvatar: (projectId: string, avatar: Project['avatar']) => set((state) => {
