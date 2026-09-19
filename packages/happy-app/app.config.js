@@ -221,7 +221,9 @@ export default {
                 root: "./sources/app"
             },
             eas: {
-                projectId: "4558dd3d-cd5a-47cd-bad9-e591a241cc06"
+                // The fork's own EAS project. The upstream value pointed at
+                // bulkacorp's project and would have pushed builds there.
+                projectId: "25aa9b46-bcb0-4d3c-befc-a5f728a910fc"
             },
             app: {
                 postHogKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
@@ -234,6 +236,6 @@ export default {
                 buildCommitTimestamp: buildMetadata.commitTimestamp,
             }
         },
-        owner: "bulkacorp"
+        owner: process.env.EXPO_OWNER || "byebyedoggy"
     }
 };
