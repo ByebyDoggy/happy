@@ -224,6 +224,10 @@ export const ca: TranslationStructure = {
         deleteTitle: 'Eliminar la categoria?',
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `S'eliminaran ${categories} categories i ${sessions} sessions tornaran a Sense categoria. Les sessions no s'eliminen.`,
         deleteConfirm: 'Elimina',
+        notLoaded: 'Aquest dispositiu encara no ha carregat les teves categories. Comprova la connexió i torna-ho a provar.',
+        conflict: "Un altre dispositiu ha canviat les categories abans, així que el teu canvi no s'ha aplicat. Torna-ho a provar.",
+        tooDeep: 'Les categories només es poden niar tres nivells.',
+        noneYet: "Encara no tens categories. Crea’n una a la fila de categories sobre la llista de sessions.",
     },
 
     sessionsFilter: {

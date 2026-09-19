@@ -5,6 +5,7 @@ import { Modal } from '@/modal';
 import { machineResumeSession, sessionArchive, sessionKill, sessionSetAgentModes, forkAndSpawn, type ForkSource } from '@/sync/ops';
 import { maybeCleanupWorktree } from '@/hooks/useWorktreeCleanup';
 import { storage, useLocalSetting, useMachine, useSetting } from '@/sync/storage';
+import { buildCategoryNodes, reassignSession, type CategoryNode } from '@/sync/sessionCategoryOps';
 import { Machine, Session } from '@/sync/storageTypes';
 import { sync } from '@/sync/sync';
 import { resolveMessageModeMeta, UnsupportedPermissionModeError } from '@/sync/messageMeta';
@@ -287,6 +288,56 @@ export function useSessionQuickActions(
         } as any);
     }, [canFork, session.id]);
 
+    /**
+     * Files this session under a category, or clears it.
+     *
+     * The picker is a list of names rather than a tree with drag targets: a
+     * session holds at most one category, so choosing from a flat list of every
+     * category is both simpler and complete. Sub-categories appear indented, and
+     * "No category" is the way back out.
+     */
+    const openCategoryPicker = React.useCallback(() => {
+        const tree = storage.getState().sessionCategories;
+        const current = tree.assignments[session.id];
+
+        const buttons: Array<{ text: string; onPress?: () => void; style?: 'cancel' | 'destructive' | 'default' }> = [];
+
+        if (tree.categories.length === 0) {
+            Modal.alert(
+                t('sessionCategories.moveTo'),
+                t('sessionCategories.noneYet'),
+                [{ text: t('common.ok'), style: 'cancel' }],
+            );
+            return;
+        }
+
+        for (const { node, depth } of flattenCategoryNodes(buildCategoryNodes(tree))) {
+            buttons.push({
+                text: (depth > 0 ? '　'.repeat(depth) : '') + node.category.name
+                    + (node.category.id === current ? ' ✓' : ''),
+                onPress: () => {
+                    void sync.updateSessionCategories(
+                        current => reassignSession(current, session.id, node.category.id),
+                    );
+                },
+            });
+        }
+
+        if (current) {
+            buttons.push({
+                text: t('sessionCategories.none'),
+                onPress: () => {
+                    void sync.updateSessionCategories(
+                        current => reassignSession(current, session.id, null),
+                    );
+                },
+            });
+        }
+
+        buttons.push({ text: t('common.cancel'), style: 'cancel' });
+        Modal.alert(t('sessionCategories.moveTo'), undefined, buttons);
+    }, [session.id]);
+
     const canCopySessionMetadata = __DEV__ || devModeEnabled;
 
     const actionItems = React.useMemo<SessionActionItem[]>(() => {
@@ -308,6 +359,8 @@ export function useSessionQuickActions(
             items.push({ id: 'copy-metadata-and-logs', icon: 'document-text-outline', label: t('sessionInfo.copyMetadata') + ' & Client Logs', onPress: copySessionMetadataAndLogs });
         }
 
+        items.push({ id: 'move-to-category', icon: 'pricetag-outline', label: t('sessionCategories.moveTo'), onPress: openCategoryPicker });
+
         items.push({ id: 'archive', icon: 'archive-outline', label: 'Archive', onPress: archiveSession, destructive: true });
 
         return items;
@@ -319,6 +372,7 @@ export function useSessionQuickActions(
         copySessionMetadataAndLogs,
         forkSource,
         forkSession,
+        openCategoryPicker,
         openDetails,
         openDuplicateSheet,
         resumeAvailability.canShowResume,
@@ -365,4 +419,22 @@ export function useSessionActionAlert(sessionId: string) {
     const session = useSession(sessionId);
     const { showActionAlert } = useSessionQuickActions(session!, {});
     return session ? showActionAlert : undefined;
+}
+
+/**
+ * Category names in tree order, with their nesting depth.
+ *
+ * The picker is a flat `Modal.alert`, which cannot nest, so depth is carried as
+ * leading indent — the same approach the chip row takes for the same reason.
+ */
+function flattenCategoryNodes(
+    nodes: readonly CategoryNode[],
+    depth = 0,
+): { node: CategoryNode; depth: number }[] {
+    const out: { node: CategoryNode; depth: number }[] = [];
+    for (const node of nodes) {
+        out.push({ node, depth });
+        out.push(...flattenCategoryNodes(node.children, depth + 1));
+    }
+    return out;
 }

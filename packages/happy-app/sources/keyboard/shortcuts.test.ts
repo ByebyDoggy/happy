@@ -118,6 +118,7 @@ describe('session action shortcuts', () => {
             'duplicate',
             'copy-metadata',
             'copy-metadata-and-logs',
+            'move-to-category',
             'archive',
         ]);
     });

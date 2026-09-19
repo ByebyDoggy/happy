@@ -224,6 +224,10 @@ export const es: TranslationStructure = {
         deleteTitle: '¿Eliminar la categoría?',
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `Se eliminarán ${categories} categorías y ${sessions} sesiones volverán a Sin categoría. Las sesiones no se eliminan.`,
         deleteConfirm: 'Eliminar',
+        notLoaded: 'Este dispositivo aún no ha cargado tus categorías. Comprueba la conexión e inténtalo de nuevo.',
+        conflict: 'Otro dispositivo cambió las categorías primero, así que tu cambio no se aplicó. Inténtalo de nuevo.',
+        tooDeep: 'Las categorías solo pueden anidarse tres niveles.',
+        noneYet: "Todavía no tienes categorías. Crea una en la fila de categorías sobre la lista de sesiones.",
     },
 
     sessionsFilter: {

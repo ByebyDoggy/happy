@@ -28,6 +28,7 @@ export type SessionActionShortcutId =
     | 'duplicate'
     | 'copy-metadata'
     | 'copy-metadata-and-logs'
+    | 'move-to-category'
     | 'archive';
 
 export type SidebarPickerShortcutId = 'changes' | 'allFiles' | 'newSideChat';
@@ -47,6 +48,8 @@ export const SESSION_ACTION_SHORTCUTS: Readonly<Record<SessionActionShortcutId, 
     duplicate: { key: 'd', code: 'KeyD', keyLabel: 'D', altKey: true, shiftKey: true },
     'copy-metadata': { key: 'm', code: 'KeyM', keyLabel: 'M', altKey: true },
     'copy-metadata-and-logs': { key: 'm', code: 'KeyM', keyLabel: 'M', altKey: true, shiftKey: true },
+    // Shift+C, next to the archive chord it sits beside in the action sheet.
+    'move-to-category': { key: 'c', code: 'KeyC', keyLabel: 'C', shiftKey: true },
     archive: { key: 'a', code: 'KeyA', keyLabel: 'A', shiftKey: true },
 };
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Pressable, FlatList, ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent, Platform } from 'react-native';
 import { Text } from '@/components/StyledText';
 import { usePathname, useRouter } from 'expo-router';
-import { SessionListViewItem, SessionRowData, useAllMachines, useSessionListViewData, useSetting, useSettingMutable } from '@/sync/storage';
+import { SessionListViewItem, SessionRowData, useAllMachines, useLocalSetting, useSessionCategories, useSessionListViewData, useSetting, useSettingMutable } from '@/sync/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { type SessionState, formatLastSeen, vibingMessages } from '@/utils/sessionUtils';
 import { Avatar } from './Avatar';
@@ -28,8 +28,10 @@ import { SessionShortcutHintBadge } from './ShortcutHints';
 import { ProviderIcon } from './ProviderIcon';
 import { buildSessionProjectDisplayGroups } from '@/utils/sessionDisplayOrder';
 import { SelectionCheckbox } from './SelectionCheckbox';
+import { CategoryChips } from './CategoryChips';
 import { useArchiveBulkDelete } from '@/hooks/useArchiveBulkDelete';
 import { collectArchivedTargets } from '@/hooks/archiveSelection';
+import { filterSessionListByCategory } from '@/hooks/sessionCategoryFilter';
 
 type SessionListDisplayItem = SessionListViewItem | {
     type: 'machine-header';
@@ -482,6 +484,8 @@ export function SessionsList({
     // exactly the state where the user has not opened the archive yet — and the
     // Select control would never appear.
     const rawData = useSessionListViewData();
+    const categories = useSessionCategories();
+    const activeCategory = useLocalSetting('activeCategory');
     const hasArchivedSessions = useHasArchivedSessions();
     // Stored under its original `hideInactiveSessions` key — synced settings
     // have no rename migration — but it hides archived sessions only.
@@ -494,12 +498,20 @@ export function SessionsList({
     const pathname = usePathname();
     const isTablet = useIsTablet();
 
-    // Bulk delete acts on the archive's rows alone, read from the unfiltered
-    // list so the set of deletable sessions is the same whether or not the
-    // archive is currently revealed.
+    // Bulk delete acts on the archive's rows, read from the unfiltered list so
+    // the set of deletable sessions does not depend on whether the archive
+    // happens to be revealed — but with the category filter applied, so
+    // "select all" can never reach sessions the user cannot see. Filtering the
+    // raw list here rather than reusing `sourceData` is what keeps those two
+    // conditions separate: the visible list also strips the hidden archive,
+    // which is exactly the stripping selection mode must ignore.
+    const categoryFilteredData = React.useMemo(
+        () => (rawData ? filterSessionListByCategory(rawData, categories, activeCategory) : null),
+        [activeCategory, categories, rawData],
+    );
     const archivedTargets = React.useMemo(
-        () => (rawData ? collectArchivedTargets(rawData) : []),
-        [rawData],
+        () => (categoryFilteredData ? collectArchivedTargets(categoryFilteredData) : []),
+        [categoryFilteredData],
     );
     const bulkDelete = useArchiveBulkDelete(archivedTargets);
     // Selection mode implies the archive is open: ticking rows the user cannot
@@ -789,15 +801,20 @@ export function SessionsList({
     // Remove this section as we'll use FlatList for all items now
 
 
-    const HeaderComponent = React.useCallback(() => {
-        const isPhoneLayout = topContentInset > 0;
-        return (
+    // The update banner and the category bar share the list header, in that
+    // order: the banner announces something new and earns the top slot, and
+    // the filter sits directly above the rows it filters. Both scroll away with
+    // the list — on a phone the pinned chrome is already the header and the
+    // dock, and a third fixed band would leave little room for the sessions.
+    const HeaderComponent = React.useCallback(() => (
+        <>
             <UpdateBanner
-                style={isPhoneLayout ? styles.phoneUpdateBanner : undefined}
-                headerStyle={isPhoneLayout ? styles.phoneUpdateBannerHeader : undefined}
+                style={topContentInset > 0 ? styles.phoneUpdateBanner : undefined}
+                headerStyle={topContentInset > 0 ? styles.phoneUpdateBannerHeader : undefined}
             />
-        );
-    }, [styles.phoneUpdateBanner, styles.phoneUpdateBannerHeader, topContentInset]);
+            <CategoryChips />
+        </>
+    ), [styles.phoneUpdateBanner, styles.phoneUpdateBannerHeader, topContentInset]);
 
     // Footer removed - all sessions now shown inline
 

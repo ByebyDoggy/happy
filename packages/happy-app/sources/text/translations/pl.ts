@@ -241,6 +241,10 @@ export const pl: TranslationStructure = {
         deleteTitle: 'Usunąć kategorię?',
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `Usuniętych zostanie kategorii: ${categories}, a ${sessions} sesji wróci do „Bez kategorii”. Same sesje nie zostaną usunięte.`,
         deleteConfirm: 'Usuń',
+        notLoaded: 'To urządzenie nie wczytało jeszcze Twoich kategorii. Sprawdź połączenie i spróbuj ponownie.',
+        conflict: 'Inne urządzenie zmieniło kategorie jako pierwsze, więc zmiana nie została zastosowana. Spróbuj ponownie.',
+        tooDeep: 'Kategorie mogą być zagnieżdżone maksymalnie na trzech poziomach.',
+        noneYet: "Nie masz jeszcze żadnych kategorii. Utwórz ją w pasku kategorii nad listą sesji.",
     },
 
     sessionsFilter: {

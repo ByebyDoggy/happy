@@ -225,6 +225,10 @@ export const zhHans: TranslationStructure = {
         deleteTitle: '删除分类？',
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `将删除 ${categories} 个分类，其中 ${sessions} 个会话会回到未分类。会话本身不会被删除。`,
         deleteConfirm: '确定删除',
+        notLoaded: '这台设备还没有加载分类，请检查网络后重试。',
+        conflict: '另一台设备先修改了分类，你的改动没有生效，请重试。',
+        tooDeep: '分类最多只能嵌套三层。',
+        noneYet: "你还没有任何分类。可以在会话列表上方的分类栏里新建一个。",
     },
 
     sessionsFilter: {

@@ -223,6 +223,10 @@ export const pt: TranslationStructure = {
         deleteTitle: 'Excluir a categoria?',
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `Serão excluídas ${categories} categorias e ${sessions} sessões voltarão para Sem categoria. As sessões não são excluídas.`,
         deleteConfirm: 'Excluir',
+        notLoaded: 'Este dispositivo ainda não carregou suas categorias. Verifique a conexão e tente novamente.',
+        conflict: 'Outro dispositivo alterou as categorias primeiro, então sua alteração não foi aplicada. Tente novamente.',
+        tooDeep: 'As categorias podem ser aninhadas em no máximo três níveis.',
+        noneYet: "Você ainda não tem categorias. Crie uma na linha de categorias acima da lista de sessões.",
     },
 
     sessionsFilter: {

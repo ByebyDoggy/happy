@@ -224,6 +224,10 @@ export const zhHant: TranslationStructure = {
         deleteTitle: '刪除分類？',
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `將刪除 ${categories} 個分類，其中 ${sessions} 個對話會回到未分類。對話本身不會被刪除。`,
         deleteConfirm: '確定刪除',
+        notLoaded: '這台裝置還沒有載入分類，請檢查網路後重試。',
+        conflict: '另一台裝置先修改了分類，你的改動沒有生效，請重試。',
+        tooDeep: '分類最多只能嵌套三層。',
+        noneYet: "你還沒有任何分類。可以在對話列表上方的分類列裡新建一個。",
     },
 
     sessionsFilter: {

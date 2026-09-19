@@ -222,6 +222,10 @@ export const it: TranslationStructure = {
         deleteTitle: 'Eliminare la categoria?',
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) => `Verranno eliminate ${categories} categorie e ${sessions} sessioni torneranno in Senza categoria. Le sessioni non vengono eliminate.`,
         deleteConfirm: 'Elimina',
+        notLoaded: 'Questo dispositivo non ha ancora caricato le tue categorie. Controlla la connessione e riprova.',
+        conflict: 'Un altro dispositivo ha modificato le categorie prima, quindi la modifica non è stata applicata. Riprova.',
+        tooDeep: 'Le categorie possono essere annidate solo su tre livelli.',
+        noneYet: "Non hai ancora categorie. Creane una nella riga delle categorie sopra l’elenco delle sessioni.",
     },
 
     sessionsFilter: {
