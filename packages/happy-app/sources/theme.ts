@@ -137,6 +137,13 @@ export const lightTheme = {
                 background: '#FFF0F0',
                 border: '#FF3B30',
                 text: '#FF3B30',
+            },
+            // Informational counterpart to warning: the same pill shape, for a
+            // badge that reports progress rather than something blocking.
+            info: {
+                background: '#F0F7FF',
+                border: '#007AFF',
+                text: '#007AFF',
             }
         },
 
@@ -392,6 +399,11 @@ export const darkTheme = {
                 background: 'rgba(255, 69, 58, 0.15)',
                 border: '#FF453A',
                 text: '#FF6B6B',
+            },
+            info: {
+                background: 'rgba(10, 132, 255, 0.15)',
+                border: '#0A84FF',
+                text: '#0A84FF',
             }
         },
 

@@ -6,8 +6,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Text } from '@/components/StyledText';
 import { Typography } from '@/constants/Typography';
 import { Avatar } from './Avatar';
-import { StatusDot } from './StatusDot';
 import { SelectionCheckbox } from './SelectionCheckbox';
+import { SessionStatusBadgePill } from './SessionStatusBadgePill';
 import { SessionActionsAnchor, SessionActionsPopover } from './SessionActionsPopover';
 import { SessionShortcutHintBadge } from './ShortcutHints';
 import { useSessionPressHandlers } from '@/hooks/useNavigateToSession';
@@ -21,14 +21,13 @@ import type { Theme } from '@/theme';
 import { t } from '@/text';
 import { RigGitLineChanges } from './RigGitLineChanges';
 import { ShimmerText } from './ShimmerText';
-import { resolveFlatSessionRowPresentation } from '@/utils/flatSessionRowPresentation';
+import { resolveFlatSessionRowStatus } from '@/utils/flatSessionRowPresentation';
 
 // Roughly three quarters of the row, the proportion a chat list uses: the row
 // is 10 + 61 + 10, so 60 leaves an even 10 either side of the avatar.
 const AVATAR_SIZE = 60;
 const ROW_PADDING_LEFT = 16;
 const AVATAR_GAP = 12;
-const TOP_RIGHT_DOT_SIZE = 20;
 const TOP_RIGHT_SLOT_WIDTH = 56;
 const UNREAD_DOT_CLEAR_GRACE_MS = 350;
 
@@ -93,18 +92,11 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived,
         return () => clearTimeout(timeout);
     }, [session.hasUnread, showUnreadDot]);
 
-    const presentation = resolveFlatSessionRowPresentation({
+    const presentation = resolveFlatSessionRowStatus({
         state: session.state,
         hasUnread: showUnreadDot,
         faded,
     });
-    const topRightAccessibilityLabel = presentation.topRight.type === 'dot'
-        ? session.state === 'input_required'
-            ? t('status.inputRequired')
-            : session.state === 'permission_required'
-                ? t('status.permissionRequired')
-                : t('status.unread')
-        : undefined;
 
     // The same `lastActivityAt` the flat list sorts on, so the stamps run in
     // the order the rows do.
@@ -199,28 +191,26 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived,
                         )}
                     </View>
                     <SessionShortcutHintBadge sessionId={session.id} style={styles.shortcutBadge} />
-                    <View
-                        style={styles.topRightStatus}
-                        accessible={topRightAccessibilityLabel !== undefined}
-                        accessibilityRole={topRightAccessibilityLabel ? 'text' : undefined}
-                        accessibilityLabel={topRightAccessibilityLabel}
-                    >
-                        {presentation.topRight.type === 'dot' ? (
-                            <StatusDot
-                                color={presentation.topRight.color}
-                                size={TOP_RIGHT_DOT_SIZE}
-                            />
-                        ) : (
-                            <Text style={styles.timestamp} numberOfLines={1}>
-                                {timestamp}
-                            </Text>
-                        )}
+                    <View style={styles.topRightStatus}>
+                        <Text style={styles.timestamp} numberOfLines={1}>
+                            {timestamp}
+                        </Text>
                     </View>
                 </View>
 
-                <Text style={styles.project} numberOfLines={1}>
-                    {projectName}
-                </Text>
+                {/* The project, and beside it the one thing about this session
+                    worth knowing without opening it. The badge shares this line
+                    rather than the title's: the title row is already carrying
+                    the name, the shortcut hint, and the time, and a column of
+                    badges down the project line is what the eye can sweep. */}
+                <View style={styles.projectRow}>
+                    <Text style={styles.project} numberOfLines={1}>
+                        {projectName}
+                    </Text>
+                    {presentation.badge && (
+                        <SessionStatusBadgePill badge={presentation.badge} />
+                    )}
+                </View>
 
                 <View style={styles.workspaceRow}>
                     <View style={styles.workspaceLocation}>
@@ -382,7 +372,13 @@ const stylesheet = StyleSheet.create((theme) => ({
         textAlign: 'right',
         ...Typography.default('regular'),
     },
+    projectRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
     project: {
+        flexShrink: 1,
         fontSize: 15,
         lineHeight: 20,
         color: theme.colors.textSecondary,

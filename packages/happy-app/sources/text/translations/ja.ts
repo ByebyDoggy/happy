@@ -90,6 +90,7 @@ export const ja: TranslationStructure = {
         offline: 'オフライン',
         lastSeen: ({ time }: { time: string }) => `最終アクセス: ${time}`,
         permissionRequired: '権限が必要です',
+        running: '実行中',
         inputRequired: '回答を待っています',
         activeNow: 'アクティブ',
         unknown: '不明',
