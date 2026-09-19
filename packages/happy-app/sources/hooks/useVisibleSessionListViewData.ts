@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { SessionListViewItem, useSessionListViewData, useSetting } from '@/sync/storage';
+import { SessionListViewItem, useLocalSetting, useSessionListViewData, useSetting, useSessionCategories } from '@/sync/storage';
 import { filterProjectGroupSessions } from '@/sync/projectGroups';
+import { filterSessionListByCategory } from './sessionCategoryFilter';
 
 /**
  * Applies the persistent archive-visibility preference to the session list.
@@ -22,6 +23,8 @@ import { filterProjectGroupSessions } from '@/sync/projectGroups';
 export function useVisibleSessionListViewData(): SessionListViewItem[] | null {
     const data = useSessionListViewData();
     const hideArchivedSessions = useSetting('hideInactiveSessions');
+    const categories = useSessionCategories();
+    const activeCategory = useLocalSetting('activeCategory');
 
     return React.useMemo(() => {
         if (!data) {
@@ -73,8 +76,8 @@ export function useVisibleSessionListViewData(): SessionListViewItem[] | null {
             result.push(item);
         }
 
-        return result;
-    }, [data, hideArchivedSessions]);
+        return filterSessionListByCategory(result, categories, activeCategory);
+    }, [activeCategory, categories, data, hideArchivedSessions]);
 }
 
 /**

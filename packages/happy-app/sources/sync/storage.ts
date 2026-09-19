@@ -1744,6 +1744,18 @@ export function useLocalSetting<K extends keyof LocalSettings>(name: K): LocalSe
     return storage(useShallow((state) => state.localSettings[name]));
 }
 
+/**
+ * The category tree, as the account has it.
+ *
+ * `useShallow` is wrong here: the tree is one object whose identity changes on
+ * every write, and an edit anywhere in it must re-render every consumer. A deep
+ * equality check would be doing that work on every store notification for a
+ * structure that changes rarely.
+ */
+export function useSessionCategories(): SessionCategoryTree {
+    return storage((state) => state.sessionCategories);
+}
+
 export function useIsSessionUnread(sessionId: string): boolean {
     return storage((state) => state.unreadSessionIds.has(sessionId));
 }

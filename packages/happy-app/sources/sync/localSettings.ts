@@ -23,6 +23,10 @@ export const LocalSettingsSchema = z.object({
     acknowledgedCliVersions: z.record(z.string(), z.string()).describe('Acknowledged CLI versions per machine'),
     // Collapsed Rig projects in the session list - keyed by project id
     collapsedProjects: z.record(z.string(), z.boolean()).describe('Collapsed state per sidebar project'),
+    // The category chip the session list is filtered to, or null for all. A
+    // device-local choice: filtering on a phone should not hide sessions on a
+    // tablet sitting on the desk.
+    activeCategory: z.string().nullable().describe('Category chip the session list is filtered to (null shows everything)'),
 });
 
 //
@@ -52,6 +56,7 @@ export const localSettingsDefaults: LocalSettings = {
     sidebarPanelActive: null,
     acknowledgedCliVersions: {},
     collapsedProjects: {},
+    activeCategory: null,
 };
 Object.freeze(localSettingsDefaults);
 

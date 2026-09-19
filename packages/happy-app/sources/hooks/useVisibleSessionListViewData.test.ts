@@ -4,6 +4,8 @@ import type { SessionListViewItem, SessionRowData } from '@/sync/storage';
 const mocks = vi.hoisted(() => ({
     data: null as SessionListViewItem[] | null,
     hideArchivedSessions: false,
+    activeCategory: null as string | null,
+    categories: { categories: [], assignments: {} } as { categories: unknown[]; assignments: Record<string, string> },
 }));
 
 // The hook only ever reads `React.useMemo`, and storage.ts pulls in React
@@ -20,6 +22,13 @@ vi.mock('@/sync/storage', () => ({
         }
         return mocks.hideArchivedSessions;
     },
+    useLocalSetting: (key: string) => {
+        if (key !== 'activeCategory') {
+            throw new Error(`Unexpected local setting read: ${key}`);
+        }
+        return mocks.activeCategory;
+    },
+    useSessionCategories: () => mocks.categories,
 }));
 
 import { useVisibleSessionListViewData } from './useVisibleSessionListViewData';
@@ -63,6 +72,10 @@ function flatSessionIds(items: SessionListViewItem[]): string[] {
 beforeEach(() => {
     mocks.data = null;
     mocks.hideArchivedSessions = false;
+    // No filter and no categories: these tests are about the archive rule, and
+    // a category filter applied on top would silently hide rows they assert on.
+    mocks.activeCategory = null;
+    mocks.categories = { categories: [], assignments: {} };
 });
 
 describe('useVisibleSessionListViewData', () => {
