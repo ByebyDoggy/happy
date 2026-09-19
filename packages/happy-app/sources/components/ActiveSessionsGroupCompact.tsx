@@ -4,10 +4,9 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { Text } from '@/components/StyledText';
 import { SessionRowData } from '@/sync/storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { type SessionState, formatPathRelativeToHome, vibingMessages, formatLastSeen } from '@/utils/sessionUtils';
+import { formatPathRelativeToHome } from '@/utils/sessionUtils';
 import { Avatar } from './Avatar';
 import { Typography } from '@/constants/Typography';
-import { StatusDot } from './StatusDot';
 import { useAllMachines, useSessionGitStatus } from '@/sync/storage';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
@@ -21,15 +20,9 @@ import { isWorktreePath, getRepoPath, getWorktreeName } from '@/utils/worktree';
 import { useNewSessionDraft } from '@/hooks/useNewSessionDraft';
 import { useRouter } from 'expo-router';
 import { SessionShortcutHintBadge } from './ShortcutHints';
+import { SessionStatusBadgePill } from './SessionStatusBadgePill';
+import { resolveFlatSessionRowStatus } from '@/utils/flatSessionRowPresentation';
 import { buildActiveSessionDisplayGroups } from '@/utils/sessionDisplayOrder';
-
-const STATUS_CONFIG: Record<SessionState, { color: string; dotColor: string; isPulsing: boolean; isConnected: boolean }> = {
-    disconnected: { color: '#999', dotColor: '#999', isPulsing: false, isConnected: false },
-    thinking: { color: '#007AFF', dotColor: '#007AFF', isPulsing: true, isConnected: true },
-    waiting: { color: '#34C759', dotColor: '#34C759', isPulsing: false, isConnected: true },
-    permission_required: { color: '#FF9500', dotColor: '#FF9500', isPulsing: true, isConnected: true },
-    input_required: { color: '#FF9500', dotColor: '#FF9500', isPulsing: true, isConnected: true },
-};
 
 interface ActiveSessionsGroupProps {
     sessions: SessionRowData[];
@@ -221,16 +214,24 @@ export function ActiveSessionsGroupCompact({ sessions, selectedSessionId }: Acti
     );
 }
 
-// Compact session row with status dot indicator
+// Compact session row with a status pill. No draft dot here: the flat list's
+// draft marker is a separate signal this card has never shown.
 export const CompactSessionRow = React.memo(({ session, selected, showBorder }: { session: SessionRowData; selected?: boolean; showBorder?: boolean }) => {
     const styles = stylesheet;
     const { theme } = useUnistyles();
-    const baseStatus = STATUS_CONFIG[session.state];
-    const needsUserAction = session.state === 'permission_required' || session.state === 'input_required';
-    // User action stays orange and pulsing even when the request also marked the session unread.
-    const status = session.hasUnread && !needsUserAction
-        ? { ...baseStatus, color: '#007AFF', dotColor: '#007AFF', isPulsing: false, isConnected: baseStatus.isConnected }
-        : baseStatus;
+    // The title dims for a session that is not reachable. That is the only
+    // thing this card draws from the raw state now — the status word comes
+    // from the shared resolver below.
+    const isConnected = session.state !== 'disconnected';
+    // The same resolver the flat list uses, and the same rule: an idle session
+    // someone has already read shows no pill, so the rows that need an answer
+    // stay findable. Nothing in this card is faded — it sits inside a project
+    // card that is only rendered for live work.
+    const presentation = resolveFlatSessionRowStatus({
+        state: session.state,
+        hasUnread: session.hasUnread,
+        faded: false,
+    });
     const sessionPressHandlers = useSessionPressHandlers(session.id);
     const swipeableRef = React.useRef<Swipeable | null>(null);
     const swipeEnabled = Platform.OS !== 'web';
@@ -266,31 +267,21 @@ export const CompactSessionRow = React.memo(({ session, selected, showBorder }: 
     };
 
     const renderTrailingIndicator = () => {
-        let indicator: React.ReactNode = null;
-
-        if (needsUserAction) {
-            indicator = <StatusDot color={status.dotColor} isPulsing={status.isPulsing} />;
-        } else if (session.hasUnread) {
-            indicator = <StatusDot color={status.dotColor} isPulsing={false} />;
-        } else if (session.state === 'waiting' && session.hasDraft) {
-            indicator = (
-                <Ionicons
-                    name="create-outline"
-                    size={14}
-                    color={theme.colors.textSecondary}
-                />
+        // The pill carries the state in words now, so the coloured dot that
+        // used to sit here would be the same fact twice. What is left is the
+        // one signal the pill does not cover: an unsent draft.
+        if (session.state === 'waiting' && session.hasDraft && !presentation.badge) {
+            return (
+                <View style={styles.trailingIndicatorSlot}>
+                    <Ionicons
+                        name="create-outline"
+                        size={14}
+                        color={theme.colors.textSecondary}
+                    />
+                </View>
             );
-        } else if (session.state === 'thinking') {
-            indicator = <StatusDot color={status.dotColor} isPulsing={status.isPulsing} />;
-        } else if (session.state === 'waiting') {
-            indicator = <StatusDot color={theme.colors.textSecondary} isPulsing={false} />;
         }
-
-        return (
-            <View style={styles.trailingIndicatorSlot}>
-                {indicator}
-            </View>
-        );
+        return null;
     };
 
     const itemContent = (
@@ -308,7 +299,7 @@ export const CompactSessionRow = React.memo(({ session, selected, showBorder }: 
                     <Text
                         style={[
                             styles.sessionTitle,
-                            status.isConnected ? styles.sessionTitleConnected : styles.sessionTitleDisconnected
+                            isConnected ? styles.sessionTitleConnected : styles.sessionTitleDisconnected
                         ]}
                         numberOfLines={2}
                     >
@@ -318,6 +309,11 @@ export const CompactSessionRow = React.memo(({ session, selected, showBorder }: 
                         sessionId={session.id}
                         style={styles.sessionShortcutBadge}
                     />
+                    {presentation.badge && (
+                        <View style={styles.statusBadgeSlot}>
+                            <SessionStatusBadgePill badge={presentation.badge} />
+                        </View>
+                    )}
                     {renderTrailingIndicator()}
                 </View>
             </View>
@@ -513,6 +509,13 @@ const stylesheet = StyleSheet.create((theme) => ({
         justifyContent: 'center',
         width: 18,
         height: 18,
+        marginLeft: 8,
+    },
+    // The pill needs room to say a word, so it is not constrained to the 18pt
+    // slot the dot used. The title above it is `numberOfLines={2}` and shrinks
+    // instead, which is the same trade the flat row makes.
+    statusBadgeSlot: {
+        flexShrink: 0,
         marginLeft: 8,
     },
     swipeAction: {
