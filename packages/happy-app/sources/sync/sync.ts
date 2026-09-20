@@ -1187,24 +1187,19 @@ class Sync {
     private fetchSessionCategories = async (): Promise<void> => {
         if (!this.credentials) return;
 
-        const loaded = await loadSessionCategories(this.credentials);
-        this.sessionCategoriesVersion = loaded?.version ?? -1;
-
-        if (loaded) {
-            storage.getState().applySessionCategories(loaded.tree);
-            return;
-        }
-
-        // No record yet. Create it once so this device has a version to write
-        // against, then publish the empty tree so the sidebar stops waiting.
-        const created = await ensureSessionCategories(this.credentials).catch(() => null);
-        if (!created) {
+        // `ensureSessionCategories` also repairs a record this device cannot
+        // read — overwriting it at its stored version, since creating a fresh
+        // one would lose the version race and leave the account stuck. Either
+        // way what comes back is a usable tree or nothing at all.
+        const resolved = await ensureSessionCategories(this.credentials).catch(() => null);
+        if (!resolved) {
             // Offline or the write failed; leave the tree unloaded so the next
             // invalidate retries rather than claiming an empty account.
             return;
         }
-        this.sessionCategoriesVersion = created.version;
-        storage.getState().applySessionCategories(created.tree);
+
+        this.sessionCategoriesVersion = resolved.version;
+        storage.getState().applySessionCategories(resolved.tree);
     };
 
     /**

@@ -1,5 +1,6 @@
 import { kvGet, kvMutate, kvSet, type KvItem } from './apiKv';
 import type { AuthCredentials } from '@/auth/tokenStorage';
+import { decodeBase64, encodeBase64 } from '@/encryption/base64';
 import {
     EMPTY_SESSION_CATEGORY_TREE,
     SESSION_CATEGORIES_KV_KEY,
@@ -20,9 +21,21 @@ import { sanitizeSessionCategoryTree } from './sessionCategoryOps';
  * one version rather than a partial merge of two trees that disagree about a
  * parent pointer.
  *
- * Nothing here talks to the server about categories. The server stores an
- * opaque string under a key it cannot read.
+ * Values on the wire are **base64**, because the store's column is a byte
+ * array: the server decodes the string it receives and re-encodes it on the
+ * way out. That is not optional — sending raw JSON means the server either
+ * rejects the write outright (`Base64Coder: incorrect characters`, on the
+ * update path) or, worse, silently stores six bytes of mangled data (on the
+ * create path, where `Buffer.from(x, 'base64')` skips the illegal characters
+ * instead of complaining). The encode/decode pair below is the whole of the
+ * client's obligation; `apiKv` stays a plain transport.
+ *
+ * Nothing the server does here is category-aware. It stores opaque bytes
+ * under a key it cannot read.
  */
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
 export interface LoadedSessionCategories {
     tree: SessionCategoryTree;
@@ -33,14 +46,15 @@ export interface LoadedSessionCategories {
 /**
  * The tree as stored, or null when the record is absent.
  *
- * A record that fails to parse is treated as absent rather than thrown: it
- * could have been written by a newer build, and losing a device's own view of
- * its categories is worse than starting from empty on that device. The caller
- * decides whether to overwrite it.
+ * A record that fails to decode returns `corrupt` rather than null. The two
+ * cases look alike — both leave this device with no tree — but they need
+ * different handling: an absent record should be created, while a corrupt one
+ * already exists and must be overwritten *at its current version*, since
+ * creating it would just lose the version race and leave the account stuck.
  */
 export async function loadSessionCategories(
     credentials: AuthCredentials,
-): Promise<LoadedSessionCategories | null> {
+): Promise<LoadedSessionCategories | { corrupt: true; version: number } | null> {
     const item = await kvGet(credentials, SESSION_CATEGORIES_KV_KEY);
     if (!item) {
         return null;
@@ -48,10 +62,30 @@ export async function loadSessionCategories(
     return decodeSessionCategories(item);
 }
 
-export function decodeSessionCategories(item: KvItem): LoadedSessionCategories | null {
+export function decodeSessionCategories(
+    item: KvItem,
+): LoadedSessionCategories | { corrupt: true; version: number } {
+    const decoded = decodeStoredTree(item.value);
+    if (!decoded) {
+        return { corrupt: true, version: item.version };
+    }
+    return { tree: decoded, version: item.version };
+}
+
+/** The tree inside a stored value, or null if the value is unusable. */
+function decodeStoredTree(value: string): SessionCategoryTree | null {
+    let text: string;
+    try {
+        text = decoder.decode(decodeBase64(value, 'base64'));
+    } catch {
+        // Not base64 at all. Records written by a build that skipped the
+        // encoding step land here.
+        return null;
+    }
+
     let parsed: unknown;
     try {
-        parsed = JSON.parse(item.value);
+        parsed = JSON.parse(text);
     } catch {
         return null;
     }
@@ -66,15 +100,19 @@ export function decodeSessionCategories(item: KvItem): LoadedSessionCategories |
         return null;
     }
 
-    return {
-        tree: sanitizeSessionCategoryTree(tree.data),
-        version: item.version,
-    };
+    return sanitizeSessionCategoryTree(tree.data);
 }
 
-/** Serialises a tree into the versioned envelope written to KV. */
+export function isCorruptRecord(
+    loaded: LoadedSessionCategories | { corrupt: true; version: number },
+): loaded is { corrupt: true; version: number } {
+    return 'corrupt' in loaded;
+}
+
+/** Serialises a tree into the versioned envelope written to KV, as base64. */
 export function encodeSessionCategories(tree: SessionCategoryTree): string {
-    return JSON.stringify({ version: SESSION_CATEGORY_TREE_VERSION, tree });
+    const json = JSON.stringify({ version: SESSION_CATEGORY_TREE_VERSION, tree });
+    return encodeBase64(encoder.encode(json), 'base64');
 }
 
 export type SaveSessionCategoriesResult =
@@ -105,26 +143,57 @@ export async function saveSessionCategories(
         return {
             ok: false,
             reason: 'version-mismatch',
-            current: await loadSessionCategories(credentials).catch(() => null),
+            current: await readCurrentSafely(credentials),
         };
     }
 
     return { ok: true, version: result.results[0].version };
 }
 
+/** The stored tree if it is readable, null if it is absent or corrupt. */
+async function readCurrentSafely(
+    credentials: AuthCredentials,
+): Promise<LoadedSessionCategories | null> {
+    const loaded = await loadSessionCategories(credentials).catch(() => null);
+    if (!loaded || isCorruptRecord(loaded)) {
+        return null;
+    }
+    return loaded;
+}
+
 /**
- * Creates the record if it is missing. Used on first load so a fresh account
- * has a version to write against instead of having to special-case -1
- * everywhere downstream.
+ * Returns the stored tree, creating it when the account has none.
+ *
+ * A corrupt record is overwritten rather than left alone. It already exists at
+ * a known version, so creating a fresh one would lose the version race and
+ * leave the account permanently unreadable — which is exactly the state a
+ * build that skipped the base64 step above leaves behind. Overwriting at the
+ * stored version is the only repair that does not need the user to intervene.
  */
 export async function ensureSessionCategories(
     credentials: AuthCredentials,
 ): Promise<LoadedSessionCategories> {
-    const existing = await loadSessionCategories(credentials);
-    if (existing) {
-        return existing;
+    const loaded = await loadSessionCategories(credentials);
+
+    if (loaded && !isCorruptRecord(loaded)) {
+        return loaded;
     }
 
+    if (loaded) {
+        // Present but unreadable: replace it where it stands.
+        const saved = await saveSessionCategories(
+            credentials,
+            EMPTY_SESSION_CATEGORY_TREE,
+            loaded.version,
+        );
+        return {
+            tree: EMPTY_SESSION_CATEGORY_TREE,
+            version: saved.ok ? saved.version : loaded.version,
+        };
+    }
+
+    // Absent: create it, so this device has a version to write against instead
+    // of special-casing -1 everywhere downstream.
     const version = await kvSet(
         credentials,
         SESSION_CATEGORIES_KV_KEY,
