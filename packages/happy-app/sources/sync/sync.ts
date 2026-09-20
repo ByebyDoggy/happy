@@ -12,6 +12,7 @@ import {
     saveSessionCategories,
 } from './apiSessionCategories';
 import { SESSION_CATEGORIES_KV_KEY, type SessionCategoryTree } from './sessionCategories';
+import { writeSessionCategories } from './sessionCategoryWrite';
 // Circular at module level (ops.ts imports sync) but safe: both sides only
 // touch each other's exports at runtime, never during module initialization.
 import { sessionSetAgentModes } from './ops';
@@ -1209,11 +1210,9 @@ class Sync {
     /**
      * Applies an edit to the category tree and writes it back.
      *
-     * The transform runs against the tree the store currently holds, then the
-     * result is written at the version this device last read. If another device
-     * wrote in between, the KV version check refuses the write and this returns
-     * the conflicting tree without applying anything — the user, not this
-     * function, decides whose edit survives.
+     * The ordering, retry, and give-up rules live in `writeSessionCategories`,
+     * which is testable without a socket; this method only supplies the parts
+     * that touch the store and the server.
      */
     public async updateSessionCategories(
         transform: (tree: SessionCategoryTree) => SessionCategoryTree,
@@ -1221,30 +1220,23 @@ class Sync {
         if (!this.credentials) {
             return { ok: false, reason: 'not-loaded' };
         }
-        if (!storage.getState().sessionCategoriesLoaded) {
-            // Writing now would be a read-modify-write against a tree this
-            // device has never seen, discarding whatever the account holds.
-            return { ok: false, reason: 'not-loaded' };
-        }
+        const credentials = this.credentials;
 
-        const next = transform(storage.getState().sessionCategories);
-        const result = await saveSessionCategories(
-            this.credentials,
-            next,
-            this.sessionCategoriesVersion,
-        );
-
-        if (!result.ok) {
-            if (result.current) {
-                this.sessionCategoriesVersion = result.current.version;
-                storage.getState().applySessionCategories(result.current.tree);
-            }
-            return { ok: false, reason: 'version-mismatch' };
-        }
-
-        this.sessionCategoriesVersion = result.version;
-        storage.getState().applySessionCategories(next);
-        return { ok: true };
+        return writeSessionCategories({
+            readLocal: () => storage.getState().sessionCategories,
+            readVersion: () => this.sessionCategoriesVersion,
+            isLoaded: () => storage.getState().sessionCategoriesLoaded,
+            write: async (tree, version) => {
+                const result = await saveSessionCategories(credentials, tree, version);
+                return result.ok
+                    ? { ok: true, version: result.version }
+                    : { ok: false, current: result.current };
+            },
+            publish: (tree, version) => {
+                this.sessionCategoriesVersion = version;
+                storage.getState().applySessionCategories(tree);
+            },
+        }, transform);
     };
 
     /**

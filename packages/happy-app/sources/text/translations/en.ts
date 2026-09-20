@@ -240,8 +240,8 @@ export const en: TranslationStructure = {
         deleteMessage: ({ categories, sessions }: { categories: number; sessions: number }) =>
             `This removes ${categories} ${categories === 1 ? 'category' : 'categories'}, and ${sessions} ${sessions === 1 ? 'session' : 'sessions'} will return to Uncategorised. The sessions themselves are not deleted.`,
         deleteConfirm: 'Delete',
-        notLoaded: 'This device has not loaded your categories yet. Check your connection and try again.',
-        conflict: 'Another device changed your categories first, so your change was not applied. Try again.',
+        notLoaded: 'Categories are still loading. Check your connection and try again.',
+        conflict: 'This change raced another edit to your categories. Please try again.',
         tooDeep: 'Categories can only nest three levels deep.',
         noneYet: "You have no categories yet. Create one from the chip row above the session list.",
     },
