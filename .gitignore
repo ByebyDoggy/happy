@@ -79,3 +79,6 @@ happy-workspaces/
 
 .context/
 .happy-tmp/
+
+# scratch tooling
+probe/

@@ -136,6 +136,22 @@ export default {
         plugins: [
             require("./plugins/withEinkCompatibility.js"),
             [
+                // Only arm64 native libraries. Every Android phone that can run
+                // this app is 64-bit ARM, and the other three ABIs exist to
+                // serve emulators and 32-bit devices — neither of which is a
+                // build target here. Dropping them is most of the APK size.
+                //
+                // Unconditional, because this file is evaluated once: shipping
+                // an x86_64 simulator build later means branching on
+                // EAS_BUILD_PROFILE here rather than adding a flag to eas.json.
+                "expo-build-properties",
+                {
+                    android: {
+                        buildArchs: ["arm64-v8a"]
+                    }
+                }
+            ],
+            [
                 "expo-router",
                 {
                     root: "./sources/app"
@@ -208,7 +224,12 @@ export default {
             ]
         ],
         updates: {
-            url: "https://u.expo.dev/4558dd3d-cd5a-47cd-bad9-e591a241cc06",
+            // Must name the same project as `extra.eas.projectId` below. The
+            // fork repointed projectId at its own EAS project but left this
+            // pointing at upstream's, which would have made every OTA check
+            // fetch a manifest this account cannot read — failing silently at
+            // runtime rather than at build time.
+            url: "https://u.expo.dev/25aa9b46-bcb0-4d3c-befc-a5f728a910fc",
             requestHeaders: {
                 "expo-channel-name": "production"
             }
