@@ -99,9 +99,9 @@ pnpm --filter happy-app tauri:dev       # macOS desktop app
 
 Variants:
 
-    development    com.slopus.happy.dev       # hot reload, internal
-    preview        com.slopus.happy.preview   # OTA / beta testing
-    production     com.ex3ndr.happy           # App Store
+    development    com.byebyedoggy.happy.dev       # hot reload, internal
+    preview        com.byebyedoggy.happy.preview   # OTA / beta testing
+    production     com.byebyedoggy.happy           # App Store
 
 ### Rebuild and reinstall the desktop .app
 

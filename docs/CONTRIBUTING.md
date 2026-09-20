@@ -73,9 +73,9 @@ The app has three build variants — all can be installed simultaneously on the 
 
 | Variant | Bundle ID | App Name | Use Case |
 |---------|-----------|----------|----------|
-| Development | `com.slopus.happy.dev` | Happy (dev) | Local development with hot reload |
-| Preview | `com.slopus.happy.preview` | Happy (preview) | Beta testing & OTA updates |
-| Production | `com.ex3ndr.happy` | Happy | App Store release |
+| Development | `com.byebyedoggy.happy.dev` | Happy (dev) | Local development with hot reload |
+| Preview | `com.byebyedoggy.happy.preview` | Happy (preview) | Beta testing & OTA updates |
+| Production | `com.byebyedoggy.happy` | Happy | App Store release |
 
 Swap `ios:dev` for `ios:preview` or `ios:production` (same for `android:`).
 

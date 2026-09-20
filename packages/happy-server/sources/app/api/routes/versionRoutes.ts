@@ -32,10 +32,14 @@ export function versionRoutes(app: Fastify) {
 
         // Check android
         if (platform.toLowerCase() === 'android') {
+            // The fork's builds are not on Google Play — the id upstream
+            // publishes under (`com.ex3ndr.happy`) belongs to them, and this
+            // fork's application ids are `com.byebyedoggy.happy*`. Releases are
+            // published to the fork's own GitHub releases page instead.
             if (semver.satisfies(version, ANDROID_UP_TO_DATE)) {
                 reply.send({ updateUrl: null });
             } else {
-                reply.send({ updateUrl: 'https://play.google.com/store/apps/details?id=com.ex3ndr.happy' });
+                reply.send({ updateUrl: 'https://github.com/ByebyDoggy/happy/releases' });
             }
             return;
         }

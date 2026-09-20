@@ -6,10 +6,19 @@ const name = {
     preview: "Happy (preview)",
     production: "Happy"
 }[variant];
+// The fork's own application ids. The upstream ones named slopus and ex3ndr,
+// neither of which is this fork — and `com.ex3ndr.happy` is the id upstream
+// publishes to Google Play, so a production build under it could never be
+// shipped from here anyway.
+//
+// Changing these makes each variant a *different app* to Android: a device
+// with the old build installed gets a second install rather than an upgrade,
+// and the old one keeps its own data. It also changes the Expo push token,
+// since tokens are bound to the applicationId that registered them.
 const bundleId = {
-    development: "com.slopus.happy.dev",
-    preview: "com.slopus.happy.preview",
-    production: "com.ex3ndr.happy"
+    development: "com.byebyedoggy.happy.dev",
+    preview: "com.byebyedoggy.happy.preview",
+    production: "com.byebyedoggy.happy"
 }[variant];
 // const stagingElevenLabsAgentId = 'agent_7801k2c0r5hjfraa1kdbytpvs6yt';
 const productionElevenLabsAgentId = 'agent_6701k211syvvegba4kt7m68nxjmw';
