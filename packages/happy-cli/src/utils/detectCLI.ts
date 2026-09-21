@@ -3,6 +3,7 @@ import os from 'os';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { findAgyBin } from '@/agy/constants';
+import { findPiBin } from '@/pi/constants';
 
 export interface CLIAvailability {
   claude: boolean;
@@ -10,6 +11,7 @@ export interface CLIAvailability {
   gemini: boolean;
   openclaw: boolean;
   agy: boolean;
+  pi: boolean;
   detectedAt: number;
 }
 
@@ -47,7 +49,9 @@ function detectPosix(): CLIAvailability {
   const openclawEnv = !!process.env.OPENCLAW_GATEWAY_URL;
   const openclaw = openclawCommand || openclawConfig || openclawEnv;
 
-  return { claude, codex, gemini, openclaw, agy, detectedAt: Date.now() };
+  const pi = findPiBin() !== undefined;
+
+  return { claude, codex, gemini, openclaw, agy, pi, detectedAt: Date.now() };
 }
 
 function detectWindows(): CLIAvailability {
@@ -71,5 +75,7 @@ function detectWindows(): CLIAvailability {
   const openclawEnv = !!process.env.OPENCLAW_GATEWAY_URL;
   const openclaw = openclawCommand || openclawConfig || openclawEnv;
 
-  return { claude, codex, gemini, openclaw, agy, detectedAt: Date.now() };
+  const pi = findPiBin() !== undefined;
+
+  return { claude, codex, gemini, openclaw, agy, pi, detectedAt: Date.now() };
 }

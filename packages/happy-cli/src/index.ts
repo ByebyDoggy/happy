@@ -718,6 +718,7 @@ ${chalk.bold('Usage:')}
   happy codex             Start Codex mode
   happy gemini            Start Gemini mode (ACP) [deprecated — use agy]
   happy agy               Start agy (Antigravity CLI) mode
+  happy pi                Start Pi mode (ACP via the pi-acp adapter)
   happy acp               Start a generic ACP-compatible agent
   happy connect           Connect AI vendor API keys
   happy sandbox           Configure and manage OS-level sandboxing

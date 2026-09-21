@@ -1,3 +1,5 @@
+import { PI_ACP_SPEC, PI_AGENT_NAME } from '@/pi/constants';
+
 export type AcpAgentConfig = {
   command: string;
   args: string[];
@@ -6,6 +8,9 @@ export type AcpAgentConfig = {
 export const KNOWN_ACP_AGENTS: Record<string, AcpAgentConfig> = {
   gemini: { command: 'gemini', args: ['--experimental-acp'] },
   opencode: { command: 'opencode', args: ['acp'] },
+  // pi has no ACP mode of its own; the adapter bridges ACP to `pi --mode rpc`.
+  // `-y` keeps the first spawn from stalling on an npx install prompt.
+  [PI_AGENT_NAME]: { command: 'npx', args: ['-y', PI_ACP_SPEC] },
 };
 
 export type ResolvedAcpAgentConfig = {

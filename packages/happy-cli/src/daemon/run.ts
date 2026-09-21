@@ -35,7 +35,7 @@ import {
   wrapTmuxCommandWithSessionEnvironmentSanitizer,
 } from './sessionEnvironment';
 import { startHappyTerminalDaemon } from './happyTerminalBoot';
-import { appendDaemonSpawnModeArgs, shouldForwardDaemonPermissionMode } from './spawnModeArgs';
+import { appendDaemonSpawnModeArgs, buildDaemonSpawnAgentArgs, shouldForwardDaemonPermissionMode } from './spawnModeArgs';
 import { hasPersistedProcessConflict, isPidAlive, machineBootTimeMs } from './sessionLiveness';
 
 /** Shell-escape a string for safe interpolation into tmux commands. */
@@ -550,19 +550,18 @@ export async function startDaemon(): Promise<void> {
             case 'agy':
               agentCommand = 'agy';
               break;
+            case 'pi':
+              agentCommand = 'pi';
+              break;
             default:
               return {
                 type: 'error',
                 errorMessage: `Unsupported agent type: '${options.agent}'. Please update your CLI to the latest version.`
               };
           }
-          const args = [
-            agentCommand,
-            '--happy-starting-mode', 'remote',
-            '--started-by', 'daemon'
-          ];
-          appendDaemonSpawnModeArgs(args, options, agentCommand);
-
+          // Pi runs through the generic ACP runner, which parses its own flags
+          // rather than the shared remote-starting template.
+          const args = buildDaemonSpawnAgentArgs(agentCommand, options);
           // Resume ids attach the new Happy session to a pre-existing provider
           // conversation created by the fork / duplicate RPC.
           if (options.resumeClaudeSessionId && agentCommand === 'claude') {

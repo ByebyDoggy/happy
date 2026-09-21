@@ -28,6 +28,7 @@ import {
   extractModelStateFromPayload,
   mergeAcpSessionConfigIntoMetadata,
 } from './sessionConfigMetadata';
+import { buildPiAcpEnv, PI_AGENT_NAME } from '@/pi/constants';
 import type { SessionConfigOption, SessionModeState, SessionModelState } from '@agentclientprotocol/sdk';
 
 const TURN_TIMEOUT_MS = 5 * 60 * 1000;
@@ -324,8 +325,12 @@ function extractConfigSelector(
   category: 'mode' | 'model',
 ): AcpConfigSelector | null {
   const optionMatchesCategory = (option: SessionConfigOption): boolean => {
-    if (option.category === category) {
-      return true;
+    if (option.category) {
+      // A provider that declares a category means it. The id/name fallback
+      // below exists for providers that omit the field entirely — running it
+      // anyway would let "model" match "mode" as a prefix and put the model
+      // list in the mode slot.
+      return option.category === category;
     }
     // Some ACP providers omit category; fallback to id/name heuristics.
     const id = normalizeComparable(option.id);
@@ -541,6 +546,9 @@ export async function runAcp(opts: {
     cwd: process.cwd(),
     command: opts.command,
     args: opts.args,
+    // The pi adapter resolves the pi binary itself, and on Windows it looks for
+    // a name the standalone release does not ship. Hand it the real path.
+    env: opts.agentName === PI_AGENT_NAME ? buildPiAcpEnv() : undefined,
     mcpServers,
     permissionHandler,
     transportHandler: new DefaultTransport(opts.agentName),

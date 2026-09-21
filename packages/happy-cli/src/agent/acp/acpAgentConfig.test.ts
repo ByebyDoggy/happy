@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { KNOWN_ACP_AGENTS, resolveAcpAgentConfig } from './acpAgentConfig';
 
 describe('KNOWN_ACP_AGENTS', () => {
-  it('defines built-in Gemini and OpenCode command mappings', () => {
+  it('defines built-in Gemini, OpenCode, and Pi command mappings', () => {
     expect(KNOWN_ACP_AGENTS).toEqual({
       gemini: { command: 'gemini', args: ['--experimental-acp'] },
       opencode: { command: 'opencode', args: ['acp'] },
+      // Pi has no ACP mode of its own; the adapter bridges it to `pi --mode rpc`.
+      pi: { command: 'npx', args: ['-y', 'pi-acp@0.0.33'] },
     });
   });
 });
@@ -32,6 +34,22 @@ describe('resolveAcpAgentConfig', () => {
       agentName: 'opencode',
       command: 'opencode',
       args: ['acp', '--foo'],
+    });
+  });
+
+  it('resolves pi to the adapter that bridges ACP to pi RPC', () => {
+    expect(resolveAcpAgentConfig(['pi'])).toEqual({
+      agentName: 'pi',
+      command: 'npx',
+      args: ['-y', 'pi-acp@0.0.33'],
+    });
+  });
+
+  it('keeps extra pi args after the pinned adapter spec', () => {
+    expect(resolveAcpAgentConfig(['pi', '--verbose'])).toEqual({
+      agentName: 'pi',
+      command: 'npx',
+      args: ['-y', 'pi-acp@0.0.33', '--verbose'],
     });
   });
 
