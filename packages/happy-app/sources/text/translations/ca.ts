@@ -229,6 +229,8 @@ export const ca: TranslationStructure = {
         conflict: 'Aquest canvi ha xocat amb una altra edició de categories. Torna-ho a provar.',
         tooDeep: 'Les categories només es poden niar tres nivells.',
         noneYet: "Encara no tens categories. Crea’n una a la fila de categories sobre la llista de sessions.",
+        emptyTitle: 'No hi ha res en aquesta categoria',
+        emptyBody: ({ name }: { name: string }) => `Cap sessió no està assignada a «${name}». Mou-ne una aquí des del menú de premsa llarga, o treu el filtre de dalt per veure-ho tot.`,
     },
 
     sessionsFilter: {

@@ -4,12 +4,17 @@ import * as z from 'zod';
 // Schema
 //
 
+// A subset of what GitHub returns, which the server forwards unmodified — so
+// nullability has to match the API's, not the app's needs. `name` and `email`
+// are both nullable there: a user who has not filled either in gets null, not
+// a missing key. `.optional()` is not a substitute, since it admits
+// `undefined` and rejects `null`.
 export const GitHubProfileSchema = z.object({
     id: z.number(),
     login: z.string(),
-    name: z.string(),
+    name: z.string().nullable(),
     avatar_url: z.string(),
-    email: z.string().optional(),
+    email: z.string().nullable(),
     bio: z.string().nullable()
 });
 

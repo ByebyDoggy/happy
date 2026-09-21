@@ -37,6 +37,19 @@ describe('sessionCategories.deleteMessage', () => {
     });
 });
 
+describe('sessionCategories.emptyBody', () => {
+    // Same failure mode as deleteMessage: a parameterised string written as a
+    // plain literal renders `${name}` or `{name}` verbatim, and only the
+    // rendered output would reveal it.
+    it.each(Object.entries(TRANSLATIONS))('%s interpolates the category name', (_name, translation) => {
+        const message = translation.sessionCategories.emptyBody({ name: 'GameDev' });
+
+        expect(message).toContain('GameDev');
+        expect(message).not.toContain('${name}');
+        expect(message).not.toContain('{name}');
+    });
+});
+
 describe('sessionCategories static labels', () => {
     const labelKeys = [
         'title',

@@ -142,12 +142,22 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
 }));
 
+/**
+ * The phone's empty list, in the two flavours it comes in.
+ *
+ * `filteredTo` non-null means a category filter is hiding everything, which is
+ * a different situation from an account with no sessions: there is work to be
+ * found, it is just filed elsewhere. Saying "No sessions yet" and offering to
+ * start one would both be wrong.
+ */
 export function EmptyMainScreen({
     hasArchivedSessions = false,
     onShowArchived,
+    filteredTo = null,
 }: {
     hasArchivedSessions?: boolean;
     onShowArchived?: () => void;
+    filteredTo?: string | null;
 }) {
     const { connectTerminal, connectWithUrl, isLoading } = useConnectTerminal();
     const { theme } = useUnistyles();
@@ -185,6 +195,18 @@ export function EmptyMainScreen({
             connectWithUrl(url.trim());
         }
     }, [connectWithUrl]);
+
+    if (filteredTo !== null) {
+        return (
+            <View style={styles.container}>
+                <Ionicons name="funnel-outline" size={56} color={theme.colors.textSecondary} style={styles.stateIcon} />
+                <Text style={styles.stateTitle}>{t('sessionCategories.emptyTitle')}</Text>
+                <Text style={styles.stateDescription}>
+                    {t('sessionCategories.emptyBody', { name: filteredTo })}
+                </Text>
+            </View>
+        );
+    }
 
     if (machineChoices.length > 0) {
         if (hasOnlineMachines) {

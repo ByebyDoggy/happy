@@ -1756,6 +1756,17 @@ export function useSessionCategories(): SessionCategoryTree {
     return storage((state) => state.sessionCategories);
 }
 
+/**
+ * Whether the tree has been read from the account at least once.
+ *
+ * Distinguishes "no categories yet" from "not loaded". Callers that repair
+ * state — such as clearing a filter that names a missing category — must wait
+ * for this, or every filter looks stranded before the first read lands.
+ */
+export function useSessionCategoriesLoaded(): boolean {
+    return storage((state) => state.sessionCategoriesLoaded);
+}
+
 export function useIsSessionUnread(sessionId: string): boolean {
     return storage((state) => state.unreadSessionIds.has(sessionId));
 }

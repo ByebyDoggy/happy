@@ -7,6 +7,7 @@ import { useAllMachines } from '@/sync/storage';
 import { useRouter } from 'expo-router';
 import { collectMachineChoices } from '@/sync/machineChoices';
 import { useOfflineMachineTroubleshooting } from '@/hooks/useOfflineMachineTroubleshooting';
+import { t } from '@/text';
 
 const stylesheet = StyleSheet.create((theme) => ({
     container: {
@@ -55,7 +56,15 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
 }));
 
-export function EmptySessionsTablet() {
+/**
+ * The empty list, in the two flavours it comes in.
+ *
+ * `filteredTo` non-null means a category filter is hiding everything, which is
+ * a different situation from an account with no sessions: there is work to be
+ * found, it is just filed elsewhere. Saying "No sessions yet" and offering to
+ * start one would both be wrong.
+ */
+export function EmptySessionsTablet({ filteredTo = null }: { filteredTo?: string | null }) {
     const { theme } = useUnistyles();
     const styles = stylesheet;
     const router = useRouter();
@@ -64,7 +73,24 @@ export function EmptySessionsTablet() {
     const hasOnlineMachines = machineChoices.some((machine) => machine.online);
     const hasOfflineMachines = machineChoices.length > 0 && !hasOnlineMachines;
     const troubleshoot = useOfflineMachineTroubleshooting(machineChoices);
-    
+
+    if (filteredTo !== null) {
+        return (
+            <View style={styles.container}>
+                <Ionicons
+                    name="funnel-outline"
+                    size={64}
+                    color={theme.colors.textSecondary}
+                    style={styles.iconContainer}
+                />
+                <Text style={styles.titleText}>{t('sessionCategories.emptyTitle')}</Text>
+                <Text style={styles.descriptionText}>
+                    {t('sessionCategories.emptyBody', { name: filteredTo })}
+                </Text>
+            </View>
+        );
+    }
+
     const handleStartNewSession = () => {
         router.navigate('/new');
     };

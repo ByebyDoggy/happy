@@ -229,6 +229,8 @@ export const en = {
         conflict: 'This change raced another edit to your categories. Please try again.',
         tooDeep: 'Categories can only nest three levels deep.',
         noneYet: "You have no categories yet. Create one from the chip row above the session list.",
+        emptyTitle: 'Nothing in this category',
+        emptyBody: ({ name }: { name: string }) => `No sessions are filed under “${name}”. Move one here from its long-press menu, or clear the filter above to see everything.`,
     },
 
     sessionsFilter: {

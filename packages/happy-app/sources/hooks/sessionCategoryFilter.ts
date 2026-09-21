@@ -147,6 +147,20 @@ export function filterSessionListByCategory(
 }
 
 /**
+ * Whether a session is filed under a category that still exists.
+ *
+ * Drives the auto-clear: a filter left pointing at a deleted category would
+ * otherwise keep the list empty until the user found the clear chip.
+ */
+export function filterPointsAtKnownCategory(
+    tree: SessionCategoryTree,
+    filter: SessionCategoryFilter,
+): boolean {
+    if (filter === null || filter === UNCATEGORISED_FILTER) return true;
+    return tree.categories.some(category => category.id === filter);
+}
+
+/**
  * How many sessions are filed under a category or below it. Drives whether a
  * chip is shown: a chip that filters to a blank list is worse than no chip.
  */

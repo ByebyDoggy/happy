@@ -3,7 +3,8 @@ import { View, ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent } from
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SessionsList } from './SessionsList';
 import { EmptyMainScreen } from './EmptyMainScreen';
-import { useHasArchivedSessions, useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
+import { useHasArchivedSessions, useVisibleSessionListViewData, useActiveCategoryFilter } from '@/hooks/useVisibleSessionListViewData';
+import { CategoryChips } from './CategoryChips';
 import { useAllMachines, useSettingMutable } from '@/sync/storage';
 import { collectMachineChoices } from '@/sync/machineChoices';
 
@@ -50,6 +51,7 @@ export const SessionsListWrapper = React.memo(({
 }) => {
     const { theme } = useUnistyles();
     const sessionListViewData = useVisibleSessionListViewData();
+    const activeCategoryFilter = useActiveCategoryFilter();
     const hasArchivedSessions = useHasArchivedSessions();
     const machines = useAllMachines({ includeOffline: true });
     const machineChoices = React.useMemo(() => collectMachineChoices(machines), [machines]);
@@ -72,14 +74,26 @@ export const SessionsListWrapper = React.memo(({
     // With an online machine, an archive-only account renders SessionsList's inline archive
     // control. With no reachable machine, the connection problem is the useful primary state and
     // the archive remains available as its secondary action.
+    //
+    // A category filter can empty the list too, and that is a third case: the
+    // account may hold plenty of sessions and none of them filed where the
+    // filter is looking. It keeps the category bar above the message, because
+    // that is where the clear chip lives — without it the filter would have no
+    // way out on this device.
     if (sessionListViewData.length === 0 && (!hasArchivedSessions || !hasOnlineMachines)) {
         return (
             <View style={styles.container}>
+                {activeCategoryFilter && (
+                    <View style={{ paddingTop: topContentInset }}>
+                        <CategoryChips />
+                    </View>
+                )}
                 <View style={styles.emptyStateContainer}>
-                    <View style={[styles.emptyStateContentContainer, { paddingTop: topContentInset, paddingBottom: bottomContentInset }]}>
+                    <View style={[styles.emptyStateContentContainer, activeCategoryFilter ? undefined : { paddingTop: topContentInset, paddingBottom: bottomContentInset }]}>
                         <EmptyMainScreen
                             hasArchivedSessions={hasArchivedSessions}
                             onShowArchived={() => setHideArchivedSessions(false)}
+                            filteredTo={activeCategoryFilter?.label ?? null}
                         />
                     </View>
                 </View>

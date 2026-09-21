@@ -227,6 +227,8 @@ export const it: TranslationStructure = {
         conflict: 'Questa modifica si è scontrata con un’altra modifica delle categorie. Riprova.',
         tooDeep: 'Le categorie possono essere annidate solo su tre livelli.',
         noneYet: "Non hai ancora categorie. Creane una nella riga delle categorie sopra l’elenco delle sessioni.",
+        emptyTitle: 'Niente in questa categoria',
+        emptyBody: ({ name }: { name: string }) => `Nessuna sessione è assegnata a «${name}». Spostane una qui dal menu di pressione prolungata, o rimuovi il filtro sopra per vedere tutto.`,
     },
 
     sessionsFilter: {

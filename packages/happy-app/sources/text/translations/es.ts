@@ -229,6 +229,8 @@ export const es: TranslationStructure = {
         conflict: 'Este cambio chocó con otra edición de categorías. Inténtalo de nuevo.',
         tooDeep: 'Las categorías solo pueden anidarse tres niveles.',
         noneYet: "Todavía no tienes categorías. Crea una en la fila de categorías sobre la lista de sesiones.",
+        emptyTitle: 'No hay nada en esta categoría',
+        emptyBody: ({ name }: { name: string }) => `Ninguna sesión está en «${name}». Mueve una aquí desde su menú de pulsación larga, o quita el filtro de arriba para verlo todo.`,
     },
 
     sessionsFilter: {

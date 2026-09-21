@@ -9,7 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useFriendRequests, useRealtimeStatus, useSettingMutable } from '@/sync/storage';
 import { NativeSettingsMenu, type NativeSettingsMenuGroup } from './NativeSettingsMenu';
-import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
+import { useVisibleSessionListViewData, useActiveCategoryFilter, useClearStrandedCategoryFilter } from '@/hooks/useVisibleSessionListViewData';
+import { CategoryChips } from './CategoryChips';
 import { useIsTablet } from '@/utils/responsive';
 import { useRouter } from 'expo-router';
 import { EmptySessionsTablet } from './EmptySessionsTablet';
@@ -252,6 +253,8 @@ const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => 
 export const MainView = React.memo(({ variant }: MainViewProps) => {
     const { theme } = useUnistyles();
     const sessionListViewData = useVisibleSessionListViewData();
+    const activeCategoryFilter = useActiveCategoryFilter();
+    useClearStrandedCategoryFilter();
     const isTablet = useIsTablet();
     const router = useRouter();
     const friendRequests = useFriendRequests();
@@ -325,12 +328,19 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
             );
         }
 
-        // Empty state
+        // Empty state — but an empty list means two different things. With a
+        // category filter on, the account may hold plenty of sessions and none
+        // of them filed where the filter is looking; saying "No sessions yet"
+        // there is wrong, and the list this branch replaces is the only place
+        // the clear chip lives, so the filter would have no way out at all.
         if (sessionListViewData.length === 0) {
             return (
                 <View style={styles.sidebarContentContainer}>
+                    {activeCategoryFilter && (
+                        <CategoryChips />
+                    )}
                     <View style={styles.emptyStateContainer}>
-                        <EmptySessionsTablet />
+                        <EmptySessionsTablet filteredTo={activeCategoryFilter?.label ?? null} />
                     </View>
                 </View>
             );

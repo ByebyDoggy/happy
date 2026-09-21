@@ -230,6 +230,8 @@ export const zhHans: TranslationStructure = {
         conflict: '这次改动和另一次分类修改撞上了，请重试。',
         tooDeep: '分类最多只能嵌套三层。',
         noneYet: "你还没有任何分类。可以在会话列表上方的分类栏里新建一个。",
+        emptyTitle: '这个分类里还没有会话',
+        emptyBody: ({ name }: { name: string }) => `没有会话归入“${name}”。可以在会话的长按菜单里把它移到这里，或者清除上方的筛选查看全部。`,
     },
 
     sessionsFilter: {

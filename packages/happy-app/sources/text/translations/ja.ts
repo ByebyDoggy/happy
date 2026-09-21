@@ -230,6 +230,8 @@ export const ja: TranslationStructure = {
         conflict: 'この変更は別のカテゴリ編集と競合しました。もう一度お試しください。',
         tooDeep: 'カテゴリは三階層までしか入れ子にできません。',
         noneYet: "まだカテゴリがありません。セッション一覧の上のカテゴリ行で作成できます。",
+        emptyTitle: 'このカテゴリには何もありません',
+        emptyBody: ({ name }: { name: string }) => `「${name}」に分類されたセッションはありません。長押しメニューからここへ移動するか、上のフィルターを解除してすべて表示してください。`,
     },
 
     sessionsFilter: {

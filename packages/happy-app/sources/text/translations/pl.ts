@@ -246,6 +246,8 @@ export const pl: TranslationStructure = {
         conflict: 'Ta zmiana zderzyła się z inną edycją kategorii. Spróbuj ponownie.',
         tooDeep: 'Kategorie mogą być zagnieżdżone maksymalnie na trzech poziomach.',
         noneYet: "Nie masz jeszcze żadnych kategorii. Utwórz ją w pasku kategorii nad listą sesji.",
+        emptyTitle: 'Nic w tej kategorii',
+        emptyBody: ({ name }: { name: string }) => `Żadna sesja nie jest przypisana do „${name}”. Przenieś ją tutaj z menu przytrzymania lub wyczyść filtr powyżej, aby zobaczyć wszystko.`,
     },
 
     sessionsFilter: {

@@ -228,6 +228,8 @@ export const pt: TranslationStructure = {
         conflict: 'Esta alteração colidiu com outra edição de categorias. Tente novamente.',
         tooDeep: 'As categorias podem ser aninhadas em no máximo três níveis.',
         noneYet: "Você ainda não tem categorias. Crie uma na linha de categorias acima da lista de sessões.",
+        emptyTitle: 'Nada nesta categoria',
+        emptyBody: ({ name }: { name: string }) => `Nenhuma sessão está em «${name}». Mova uma para cá pelo menu de pressionar e segurar, ou limpe o filtro acima para ver tudo.`,
     },
 
     sessionsFilter: {

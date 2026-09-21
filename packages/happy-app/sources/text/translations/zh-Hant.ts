@@ -229,6 +229,8 @@ export const zhHant: TranslationStructure = {
         conflict: '這次改動和另一次分類修改撞上了，請重試。',
         tooDeep: '分類最多只能嵌套三層。',
         noneYet: "你還沒有任何分類。可以在對話列表上方的分類列裡新建一個。",
+        emptyTitle: '這個分類裡還沒有對話',
+        emptyBody: ({ name }: { name: string }) => `沒有對話歸入“${name}”。可以在對話的長按選單裡把它移到這裡，或清除上方的篩選查看全部。`,
     },
 
     sessionsFilter: {

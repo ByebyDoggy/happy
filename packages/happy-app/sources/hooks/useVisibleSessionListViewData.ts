@@ -1,7 +1,13 @@
 import * as React from 'react';
-import { SessionListViewItem, useLocalSetting, useSessionListViewData, useSetting, useSessionCategories } from '@/sync/storage';
+import { SessionListViewItem, useLocalSetting, useLocalSettingMutable, useSessionCategories, useSessionCategoriesLoaded, useSessionListViewData, useSetting } from '@/sync/storage';
 import { filterProjectGroupSessions } from '@/sync/projectGroups';
-import { filterSessionListByCategory } from './sessionCategoryFilter';
+import {
+    UNCATEGORISED_FILTER,
+    filterPointsAtKnownCategory,
+    filterSessionListByCategory,
+    type SessionCategoryFilter,
+} from './sessionCategoryFilter';
+import { t } from '@/text';
 
 /**
  * Applies the persistent archive-visibility preference to the session list.
@@ -81,9 +87,51 @@ export function useVisibleSessionListViewData(): SessionListViewItem[] | null {
 }
 
 /**
- * Whether the archive-visibility control can change anything. Keyed off the
- * same `archived` flag the filter above uses so the control never appears
- * without changing what is on screen.
+ * The category the list is filtered to, as a value the UI can act on: null
+ * when nothing is filtered, otherwise the filter with a name to show.
+ *
+ * `label` is null when the filter names a category that no longer exists —
+ * the filter is still in force (which is why this reports it at all), it just
+ * has no name to put on the clear chip.
+ */
+export function useActiveCategoryFilter(): { filter: SessionCategoryFilter; label: string | null } | null {
+    const categories = useSessionCategories();
+    const filter = useLocalSetting('activeCategory');
+
+    return React.useMemo(() => {
+        if (filter === null) return null;
+        if (filter === UNCATEGORISED_FILTER) {
+            return { filter, label: t('sessionCategories.uncategorised') };
+        }
+        const found = categories.categories.find(category => category.id === filter);
+        return { filter, label: found ? found.name : null };
+    }, [categories, filter]);
+}
+
+/**
+ * Clears a filter that names a category the account no longer has.
+ *
+ * Deleting a category is not the only way to strand one: this device may have
+ * been offline when the deletion happened on another. Either way the list
+ * stays empty with nothing to explain it, so the filter is dropped rather than
+ * left for the user to discover the clear chip.
+ */
+export function useClearStrandedCategoryFilter(): void {
+    const categories = useSessionCategories();
+    const [activeCategory, setActiveCategory] = useLocalSettingMutable('activeCategory');
+    const loaded = useSessionCategoriesLoaded();
+
+    React.useEffect(() => {
+        // Only once the tree is known: before that every filter looks stranded.
+        if (!loaded || activeCategory === null) return;
+        if (filterPointsAtKnownCategory(categories, activeCategory)) return;
+        setActiveCategory(null);
+    }, [activeCategory, categories, loaded, setActiveCategory]);
+}
+
+/**
+ * Whether any archived rows exist. Drives the archive toggle's presence.
+ * Keyed off the same `archived` flag the filter above uses.
  */
 export function useHasArchivedSessions(): boolean {
     const data = useSessionListViewData();
