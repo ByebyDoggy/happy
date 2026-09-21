@@ -214,6 +214,7 @@ export const zhHans: TranslationStructure = {
     sessionCategories: {
         title: '分类',
         all: '全部',
+        showAll: '显示全部',
         uncategorised: '未分类',
         create: '新建分类',
         rename: '重命名',

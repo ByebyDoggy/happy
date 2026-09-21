@@ -228,6 +228,7 @@ export const en: TranslationStructure = {
         // Category chips above the session list
         title: 'Categories',
         all: 'All',
+        showAll: 'Show all',
         uncategorised: 'Uncategorised',
         create: 'New category',
         rename: 'Rename',

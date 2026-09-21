@@ -211,6 +211,7 @@ export const it: TranslationStructure = {
     sessionCategories: {
         title: 'Categorie',
         all: 'Tutte',
+        showAll: 'Mostra tutte',
         uncategorised: 'Senza categoria',
         create: 'Nuova categoria',
         rename: 'Rinomina',

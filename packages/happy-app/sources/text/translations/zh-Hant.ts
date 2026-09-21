@@ -213,6 +213,7 @@ export const zhHant: TranslationStructure = {
     sessionCategories: {
         title: '分類',
         all: '全部',
+        showAll: '顯示全部',
         uncategorised: '未分類',
         create: '新建分類',
         rename: '重新命名',

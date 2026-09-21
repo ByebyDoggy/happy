@@ -230,6 +230,7 @@ export const pl: TranslationStructure = {
     sessionCategories: {
         title: 'Kategorie',
         all: 'Wszystkie',
+        showAll: 'Pokaż wszystkie',
         uncategorised: 'Bez kategorii',
         create: 'Nowa kategoria',
         rename: 'Zmień nazwę',

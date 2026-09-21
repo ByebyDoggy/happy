@@ -213,6 +213,7 @@ export const ca: TranslationStructure = {
     sessionCategories: {
         title: 'Categories',
         all: 'Totes',
+        showAll: 'Mostra-ho tot',
         uncategorised: 'Sense categoria',
         create: 'Nova categoria',
         rename: 'Canvia el nom',

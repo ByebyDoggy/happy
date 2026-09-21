@@ -214,6 +214,7 @@ export const ja: TranslationStructure = {
     sessionCategories: {
         title: 'カテゴリ',
         all: 'すべて',
+        showAll: 'すべて表示',
         uncategorised: '未分類',
         create: '新しいカテゴリ',
         rename: '名前を変更',

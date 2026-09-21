@@ -197,6 +197,7 @@ export const ru: TranslationStructure = {
     sessionCategories: {
         title: 'Категории',
         all: 'Все',
+        showAll: 'Показать все',
         uncategorised: 'Без категории',
         create: 'Новая категория',
         rename: 'Переименовать',

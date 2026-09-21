@@ -23,6 +23,11 @@ import { useSessionCategoryActions } from '@/hooks/useSessionCategoryActions';
  * Tapping filters, long-pressing manages. The two gestures on one target is
  * deliberate: a category's own menu is about that category, so it belongs on
  * the category rather than in a separate management screen.
+ *
+ * Because the row scrolls, the "All" chip is not always on screen — tapping it
+ * is not a dependable way back to the unfiltered list, which is what the
+ * banner at the right end is for. It appears only while a filter is active and
+ * never scrolls away, so there is always exactly one visible way out.
  */
 export const CategoryChips = React.memo(() => {
     const styles = stylesheet;
@@ -39,6 +44,18 @@ export const CategoryChips = React.memo(() => {
     // The uncategorised chip only means something once something is filed;
     // before that it would filter to the same list "All" already shows.
     const hasFiledSessions = Object.keys(tree.assignments).length > 0;
+
+    // The name to show on the way out, resolved from whichever filter is set.
+    const activeLabel = React.useMemo(() => {
+        if (activeCategory === null) return null;
+        if (activeCategory === UNCATEGORISED_FILTER) {
+            return t('sessionCategories.uncategorised');
+        }
+        const found = rows.find(({ node }) => node.category.id === activeCategory);
+        // A filter naming a category that no longer exists still needs a way
+        // out, so the missing name falls back to the generic one.
+        return found ? found.node.category.name : t('sessionCategories.title');
+    }, [activeCategory, rows]);
 
     const select = React.useCallback((filter: SessionCategoryFilter) => {
         // Tapping the active chip clears the filter, so the row is its own way
@@ -107,6 +124,24 @@ export const CategoryChips = React.memo(() => {
             >
                 <Ionicons name="add" size={14} color={theme.colors.textSecondary} />
             </Pressable>
+
+            {/* Pinned to the end of the row rather than the start: the chips
+                grow rightward, so the end is where the user's thumb already
+                is after picking one — and it is the one control that must not
+                scroll out of reach. */}
+            {activeLabel !== null && (
+                <Pressable
+                    onPress={() => setActiveCategory(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('sessionCategories.showAll')}
+                    style={({ pressed }) => [styles.clearChip, pressed && styles.chipPressed]}
+                >
+                    <Text style={styles.clearChipText} numberOfLines={1}>
+                        {activeLabel}
+                    </Text>
+                    <Ionicons name="close-circle" size={14} color={theme.colors.box.info.text} />
+                </Pressable>
+            )}
         </ScrollView>
     );
 });
@@ -236,5 +271,24 @@ const stylesheet = StyleSheet.create((theme) => ({
         fontSize: 13,
         color: theme.colors.textSecondary,
         ...Typography.default('regular'),
+    },
+    // The way out of a filter. Blue like an active chip, but with a close icon,
+    // so it reads as "you are here, tap to leave" rather than as another
+    // category to select.
+    clearChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 9999,
+        backgroundColor: theme.colors.box.info.background,
+        maxWidth: 180,
+    },
+    clearChipText: {
+        flexShrink: 1,
+        fontSize: 13,
+        color: theme.colors.box.info.text,
+        ...Typography.default('semiBold'),
     },
 }));
