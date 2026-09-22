@@ -32,6 +32,9 @@ const harnessIcons: Record<AvatarHarnessIcon, number> = {
     codex: require('@/assets/images/icon-gpt.png'),
     agy: require('@/assets/images/icon-agy.png'),
     rig: require('@/assets/images/logo-black.png'),
+    // No dedicated pi glyph yet; reuse the neutral Happy mark so the badge
+    // renders. Swap for a real Pi asset when one is added.
+    pi: require('@/assets/images/icon-monochrome.png'),
 };
 
 // One badge geometry for every place an avatar carries a harness icon. The

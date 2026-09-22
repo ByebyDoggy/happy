@@ -81,19 +81,35 @@ describe('harness catalog', () => {
 
     it('never lists Antigravity without an explicit installation report', () => {
         expect(listAvailableHarnesses({
-            availability: { claude: true, agy: false },
+            availability: { claude: true, agy: false, pi: false },
             happyAgentAvailable: false,
             selected: 'agy',
         }).map((harness) => harness.key)).toEqual(['claude']);
 
         expect(listAvailableHarnesses({
-            availability: null,
+            availability: { claude: true, agy: false, pi: true },
             happyAgentAvailable: false,
             selected: 'agy',
-        }).map((harness) => harness.key)).toEqual(['claude', 'codex']);
+        }).map((harness) => harness.key)).toEqual(['claude', 'pi']);
+    });
+
+    it('never lists Pi without an explicit installation report', () => {
+        expect(listAvailableHarnesses({
+            availability: { claude: true, pi: false },
+            happyAgentAvailable: false,
+            selected: null,
+        }).map((harness) => harness.key)).toEqual(['claude']);
+
+        expect(listAvailableHarnesses({
+            availability: { claude: true, pi: true },
+            happyAgentAvailable: false,
+            selected: null,
+        }).map((harness) => harness.key)).toEqual(['claude', 'pi']);
     });
 
     it('falls back to the whole catalog when a machine reports no capabilities', () => {
+        // Pi is niche like Antigravity: the fallback catalog keeps it out until
+        // a machine explicitly reports the adapter installed.
         expect(listAvailableHarnesses({
             availability: null,
             happyAgentAvailable: false,

@@ -43,7 +43,9 @@ graph TB
 - **API client:** `src/api` handles HTTP + Socket.IO, encryption, and RPC.
 - **Daemon:** `src/daemon` runs in the background, spawns sessions, and maintains machine state.
 - **Persistence/config:** `src/persistence.ts` + `src/configuration.ts` manage local state in `~/.happy`.
-- **Agents:** `src/claude`, `src/codex`, `src/gemini` provide provider-specific runners.
+- **Agents:** `src/claude`, `src/codex`, `src/gemini`, `src/agy` provide provider-specific
+  runners. Agents that speak the Agent Client Protocol instead go through
+  `src/agent/acp` — see [ACP agents](#acp-agents).
 
 ## CLI entry flow
 
@@ -372,10 +374,56 @@ RPC is used to send commands over the Socket.IO connection:
 
 This mechanism allows the server and mobile clients to drive local actions without exposing a broad REST surface.
 
+## ACP agents
+
+Agents that speak the [Agent Client Protocol](https://agentclientprotocol.com/) are
+started through the generic runner `happy acp`. `src/agent/acp` speaks ACP's
+JSON-RPC over stdio and translates it into Happy's own agent messages, so no
+per-agent backend is needed.
+
+```mermaid
+graph LR
+    Daemon[Daemon spawn] --> CLI[happy acp &lt;name&gt;]
+    CLI --> Backend[AcpBackend]
+    Backend --> |stdio JSON-RPC| Adapter[ACP adapter]
+    Adapter --> Agent[Agent process]
+```
+
+To add an ACP agent:
+
+1. Add its command to `KNOWN_ACP_AGENTS` in `src/agent/acp/acpAgentConfig.ts`
+   (or let an unknown name fall through and be spawned as the command itself).
+2. If the daemon should be able to start it remotely, add the id to the
+   `agent` enum in `src/daemon/controlServer.ts`, the type in
+   `src/modules/common/registerCommonHandlers.ts`, and the switch in
+   `src/daemon/run.ts`.
+3. If it needs a harness-specific spawn argument vector, add a branch to
+   `buildDaemonSpawnAgentArgs` in `src/daemon/spawnModeArgs.ts` — the shared
+   template passes `--happy-starting-mode`, which ACP runners do not accept.
+4. Report the binary in `src/utils/detectCLI.ts` so the app can offer it.
+
+### Pi
+
+Pi has no ACP mode of its own; the community `pi-acp` adapter bridges ACP to a
+`pi --mode rpc` subprocess. Two platform notes are baked into
+`src/pi/constants.ts`:
+
+- On Windows the adapter looks for `pi.cmd`, which the standalone Pi release
+  does not ship (it installs `pi.exe`). `cmd.exe` reports a missing command as
+  a successful spawn, so the adapter then writes to a dead pipe and
+  `session/new` fails with "Cannot call write after a stream was destroyed".
+  `buildPiAcpEnv()` passes the resolved binary as `PI_ACP_PI_COMMAND` so the
+  adapter skips its own lookup.
+- `resolvePiAcpCommand()` prefers a globally-installed `pi-acp` over
+  `npx -y pi-acp@<version>`. npx can stall long enough to blow Happy's
+  initialize timeout, and the failure leaves no adapter process to diagnose.
+
 ## Implementation references
 - CLI entry: `packages/happy-cli/src/index.ts`
 - Daemon: `packages/happy-cli/src/daemon`
 - Control server/client: `packages/happy-cli/src/daemon/controlServer.ts`, `packages/happy-cli/src/daemon/controlClient.ts`
 - API clients: `packages/happy-cli/src/api`
+- ACP runner: `packages/happy-cli/src/agent/acp`
+- Pi constants: `packages/happy-cli/src/pi/constants.ts`
 - Persistence: `packages/happy-cli/src/persistence.ts`
 - Config: `packages/happy-cli/src/configuration.ts`

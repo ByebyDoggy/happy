@@ -148,6 +148,8 @@ export const MachineMetadataSchema = z.object({
     // Optional so metadata written by a CLI predating agy detection still
     // matches this shape. detectCLIAvailability always reports it.
     agy: z.boolean().optional(),
+    // Same rationale as agy: older daemons do not report pi at all.
+    pi: z.boolean().optional(),
     detectedAt: z.number(),
   }).optional(),
   resumeSupport: z.object({

@@ -173,7 +173,7 @@ export interface SpawnSessionOptions {
     directory: string;
     approvedNewDirectoryCreation?: boolean;
     token?: string;
-    agent?: 'codex' | 'claude' | 'gemini' | 'openclaw' | 'agy' | 'rig';
+    agent?: 'codex' | 'claude' | 'gemini' | 'openclaw' | 'agy' | 'rig' | 'pi';
     permissionMode?: string;
     modelMode?: string;
     effortLevel?: string;
@@ -275,7 +275,7 @@ export async function machineSpawnNewSession(options: SpawnSessionOptions): Prom
             directory: string
             approvedNewDirectoryCreation?: boolean,
             token?: string,
-            agent?: 'codex' | 'claude' | 'gemini' | 'openclaw' | 'agy' | 'rig',
+            agent?: 'codex' | 'claude' | 'gemini' | 'openclaw' | 'agy' | 'rig' | 'pi',
             permissionMode?: string,
             modelMode?: string,
             effortLevel?: string,
@@ -858,6 +858,15 @@ export function sessionSetAgentModes(sessionId: string, patch: SessionAgentModes
  */
 export async function sessionAbort(sessionId: string): Promise<void> {
     const metadata = storage.getState().sessions[sessionId]?.metadata;
+    // TEMP-DIAG: Stop is unavailable on web; remove once found.
+    console.log('[diag:abort] called', JSON.stringify({
+        sessionId,
+        hasMetadata: !!metadata,
+        lifecycleState: metadata?.lifecycleState,
+        capabilities: metadata?.capabilities ?? null,
+        canAbort: rigCanAbort(metadata),
+        isRig: isRigMetadata(metadata),
+    }));
     if (!rigCanAbort(metadata)) {
         throw new Error('Abort is not available for this session');
     }

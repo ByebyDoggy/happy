@@ -244,6 +244,15 @@ export function getAgyPermissionModes(translate: Translate): PermissionMode[] {
     ];
 }
 
+// Pi runs through the ACP adapter, which has no per-tool approval gate and no
+// permission flags. A single "Default" mode keeps the picker honest — offering
+// Claude/Codex modes here would promise a harness that cannot deliver them.
+export function getPiPermissionModes(translate: Translate): PermissionMode[] {
+    return [
+        { key: 'default', name: 'Default', description: translate('agentInput.permissionMode.default') },
+    ];
+}
+
 // Before the release tagged above the CLI's MessageMetaSchema rejected `auto`,
 // and a rejected mode dropped the whole prompt — the same failure mode
 // `dontAsk` had.
@@ -323,7 +332,19 @@ export function getHardcodedPermissionModes(flavor: AgentFlavor, translate: Tran
     if (flavor === 'agy') {
         return getAgyPermissionModes(translate);
     }
+    if (flavor === 'pi') {
+        return getPiPermissionModes(translate);
+    }
     return getClaudePermissionModes(translate);
+}
+
+export function getPiModelModes(): ModelMode[] {
+    // Pi's current model is published through ACP metadata when available.
+    // Before the first session reports, offer a neutral default so the picker
+    // is not empty; the real model list replaces this once a session runs.
+    return [
+        { key: 'default', name: 'Default model', description: null },
+    ];
 }
 
 export function getOpenClawModelModes(): ModelMode[] {
@@ -356,6 +377,9 @@ export function getHardcodedModelModes(flavor: AgentFlavor, _translate: Translat
     }
     if (flavor === 'agy') {
         return getAgyModelModes();
+    }
+    if (flavor === 'pi') {
+        return getPiModelModes();
     }
     return getClaudeModelModes();
 }
@@ -616,6 +640,6 @@ export function getDefaultEffortKeyForModel(flavor: AgentFlavor, modelKey: strin
 }
 
 export function getSupportsWorktree(flavor: AgentFlavor): boolean {
-    if (flavor === 'openclaw') return false;
+    if (flavor === 'openclaw' || flavor === 'pi') return false;
     return true;
 }

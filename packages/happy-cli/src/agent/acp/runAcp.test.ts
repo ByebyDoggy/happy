@@ -557,6 +557,81 @@ describe('runAcp', () => {
     );
   });
 
+  it('does not let a declared model category satisfy the mode selector', async () => {
+    // The pi adapter declares category: "model" on its model picker and gives
+    // modes their own config option. "model" contains "mode" as a prefix, so
+    // the id/name fallback must not run when a category is declared — running
+    // it put the seventeen-model list into the mode slot.
+    mocks.backendState.startSessionMessages = [
+      {
+        type: 'event',
+        name: 'config_options_update',
+        payload: {
+          configOptions: [
+            {
+              type: 'select',
+              id: 'thought_level',
+              name: 'Thinking',
+              category: 'thought_level',
+              currentValue: 'medium',
+              options: [
+                { value: 'off', name: 'Thinking: off', description: null },
+                { value: 'medium', name: 'Thinking: medium', description: null },
+              ],
+            },
+            {
+              type: 'select',
+              id: 'model',
+              name: 'Model',
+              category: 'model',
+              currentValue: 'claude-sonnet',
+              options: [
+                { value: 'claude-sonnet', name: 'Claude Sonnet', description: null },
+                { value: 'claude-opus', name: 'Claude Opus', description: null },
+              ],
+            },
+          ],
+        },
+      },
+    ];
+
+    const runPromise = runAcp({
+      credentials: { token: 'token', encryption: { type: 'legacy', secret: new Uint8Array(32) } },
+      agentName: 'pi',
+      command: 'npx',
+      args: ['-y', 'pi-acp@0.0.33'],
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.backendState.startSessionCalls).toBe(1);
+    });
+
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    const metadataHandlers = mocks.mockSession.updateMetadata.mock.calls.map((call) => call[0]);
+    const baseMetadata = {
+      path: '/repo',
+      host: 'host',
+      homeDir: '/home/user',
+      happyHomeDir: '/home/user/.happy',
+      happyLibDir: '/repo/.happy/lib',
+      happyToolsDir: '/repo/.happy/tools',
+    };
+    const appliedMetadata = metadataHandlers.map((handler) => handler(baseMetadata));
+
+    const configMerge = appliedMetadata.find((m) => 'models' in m && 'thoughtLevels' in m);
+    expect(configMerge).toBeDefined();
+    expect(configMerge!.operatingModes).toBeUndefined();
+    expect(configMerge!.currentOperatingModeCode).toBeUndefined();
+    expect(configMerge!.models).toEqual([
+      { code: 'claude-sonnet', value: 'Claude Sonnet', description: null },
+      { code: 'claude-opus', value: 'Claude Opus', description: null },
+    ]);
+    expect(configMerge!.currentModelCode).toBe('claude-sonnet');
+    expect(configMerge!.currentThoughtLevelCode).toBe('medium');
+  });
+
   it('switches ACP model and permission mode when requested values match config options', async () => {
     mocks.backendState.startSessionMessages = [
       {
