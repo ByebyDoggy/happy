@@ -73,15 +73,22 @@ const {
         }),
     };
 
+    // uploads is keyed by the POSIX-style ref that putLocalFile stores, while the
+    // route hands us a platform-native path (path.join on getLocalFilesDir).
+    // Recover the ref by locating the directory segment after unifying
+    // separators: stripping a literal POSIX prefix never matched a Windows path,
+    // so every existing upload looked missing and downloads answered 404.
+    // (Defined here, not imported: vi.hoisted runs before the module imports.)
+    const refFromPath = (filePath: string) => {
+        const normalized = filePath.replace(/\\/g, "/");
+        const marker = "/tmp/test-files/";
+        const at = normalized.indexOf(marker);
+        return at === -1 ? normalized : normalized.slice(at + marker.length);
+    };
+
     const fsMock = {
-        existsSync: vi.fn((p: string) => {
-            const rel = p.replace(/^\/tmp\/test-files\//, "");
-            return state.uploads.has(rel);
-        }),
-        readFileSync: vi.fn((p: string) => {
-            const rel = p.replace(/^\/tmp\/test-files\//, "");
-            return state.uploads.get(rel) ?? Buffer.alloc(0);
-        }),
+        existsSync: vi.fn((p: string) => state.uploads.has(refFromPath(p))),
+        readFileSync: vi.fn((p: string) => state.uploads.get(refFromPath(p)) ?? Buffer.alloc(0)),
     };
 
     return { state, dbMock, filesMock, fsMock, resetState, seedSession };

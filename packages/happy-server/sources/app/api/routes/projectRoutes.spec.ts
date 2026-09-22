@@ -9,6 +9,7 @@ const {
     filesMock,
     emitUpdate,
     resetState,
+    refFromPath,
 } = vi.hoisted(() => {
     type Project = {
         id: string;
@@ -133,7 +134,20 @@ const {
         deleteProjectAvatars: vi.fn(async () => undefined),
     };
 
-    return { state, dbMock, filesMock, emitUpdate, resetState };
+    // uploads is keyed by the POSIX-style ref putLocalFile stores, while the route
+    // hands us a platform-native path (path.resolve on getLocalFilesDir). Recover
+    // the ref by locating the directory segment after unifying separators:
+    // stripping a literal POSIX prefix never matched a Windows path, so an
+    // existing upload looked missing and avatar activation answered 404.
+    // (Defined here, not imported: vi.hoisted runs before the module imports.)
+    const refFromPath = (filePath: string) => {
+        const normalized = filePath.replace(/\\/g, '/');
+        const marker = '/tmp/project-test-files/';
+        const at = normalized.indexOf(marker);
+        return at === -1 ? normalized : normalized.slice(at + marker.length);
+    };
+
+    return { state, dbMock, filesMock, emitUpdate, resetState, refFromPath };
 });
 
 vi.mock('@/storage/db', () => ({ db: dbMock }));
@@ -142,14 +156,12 @@ vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof import('fs')>('fs');
     return {
         ...actual,
-        existsSync: vi.fn((filePath: string) => {
-            const ref = filePath.replace(/^\/tmp\/project-test-files\//, '');
-            return state.uploads.has(ref);
-        }),
-        readFileSync: vi.fn((filePath: string) => {
-            const ref = filePath.replace(/^\/tmp\/project-test-files\//, '');
-            return state.uploads.get(ref) ?? Buffer.alloc(0);
-        }),
+        // uploads is keyed by the POSIX-style ref putLocalFile stores, while the
+        // route hands us a platform-native path (path.resolve on the dir from
+        // getLocalFilesDir). Invert that instead of stripping a literal POSIX
+        // prefix, which never matched a backslash path on Windows.
+        existsSync: vi.fn((filePath: string) => state.uploads.has(refFromPath(filePath))),
+        readFileSync: vi.fn((filePath: string) => state.uploads.get(refFromPath(filePath)) ?? Buffer.alloc(0)),
     };
 });
 vi.mock('@/storage/seq', () => ({ allocateUserSeq: vi.fn(async () => 1) }));
