@@ -74,6 +74,9 @@ beforeEach(async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     mocks.state = {
         sessions: {}, settings: settingsDefaults,
+        // The real store initialises sessionMessages to {}; sendMessage reads it
+        // to detect an already-pending user message, so the fixture must carry it.
+        sessionMessages: {},
         getActiveSessions: () => [],
         applySessions: (sessions: any[]) => { for (const session of sessions) mocks.state.sessions[session.id] = session; },
         markSessionMessageSent: vi.fn(),

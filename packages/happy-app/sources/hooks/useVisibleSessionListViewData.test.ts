@@ -14,6 +14,11 @@ vi.mock('react', () => ({
     useMemo: <T,>(factory: () => T) => factory(),
 }));
 
+// The hook imports `t` from here, which pulls expo-localization -> expo-modules-core
+// -> react-native (Flow source Vite cannot parse). The hook never formats a
+// label under test, so stub the translate surface.
+vi.mock('@/text', () => ({ t: (key: string) => key }));
+
 vi.mock('@/sync/storage', () => ({
     useSessionListViewData: () => mocks.data,
     useSetting: (key: string) => {

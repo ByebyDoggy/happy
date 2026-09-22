@@ -44,6 +44,8 @@ describe('blob encryption', () => {
         expect(new Uint8Array(decrypted!)).toEqual(data);
     });
 
+    // 1MB through libsodium's sealed box, plus a byte-by-byte comparison:
+    // several seconds on a busy machine, past vitest's 5s default.
     it('should encrypt and decrypt a large blob (1MB)', () => {
         const data = new Uint8Array(1024 * 1024);
         for (let i = 0; i < data.length; i++) data[i] = i % 256;
@@ -53,7 +55,7 @@ describe('blob encryption', () => {
 
         expect(decrypted).not.toBeNull();
         expect(new Uint8Array(decrypted!)).toEqual(data);
-    });
+    }, 30_000);
 
     it('should handle binary data with null bytes', () => {
         const data = new Uint8Array([0, 0, 0, 255, 0, 128, 0]);

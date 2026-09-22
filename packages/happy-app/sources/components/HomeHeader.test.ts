@@ -49,13 +49,21 @@ vi.mock('@/sync/serverConfig', () => ({
 
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 59 }) }));
 vi.mock('@/utils/responsive', () => ({ useIsTablet: () => false }));
-vi.mock('@/hooks/useVisibleSessionListViewData', () => ({ useVisibleSessionListViewData: () => [] }));
+vi.mock('@/hooks/useVisibleSessionListViewData', () => ({
+    useVisibleSessionListViewData: () => [],
+    // MainView calls these too; no category filter is active in this test.
+    useActiveCategoryFilter: () => null,
+    useClearStrandedCategoryFilter: () => {},
+}));
 vi.mock('@/hooks/useNewSessionDraft', () => ({ useNewSessionDraft: {} }));
 vi.mock('@/hooks/useStartSessionFromDraft', () => ({ useStartSessionFromDraft: () => ({ isStarting: false }) }));
 vi.mock('@/track', () => ({ trackFriendsSearch: vi.fn() }));
 vi.mock('./NativeSettingsMenu', () => ({ NativeSettingsMenu: () => null }));
 vi.mock('./EmptySessionsTablet', () => ({ EmptySessionsTablet: () => null }));
 vi.mock('./SessionsList', () => ({ SessionsList: () => null }));
+// MainView's category chips pull in expo-crypto -> expo-modules-core (needs the
+// native runtime) and ScrollView, neither of which this header test exercises.
+vi.mock('./CategoryChips', () => ({ CategoryChips: () => null }));
 vi.mock('./TabBar', () => ({ TabBar: () => null }));
 vi.mock('./InboxView', () => ({ InboxView: () => null }));
 vi.mock('./SettingsViewWrapper', () => ({ SettingsViewWrapper: () => null }));
