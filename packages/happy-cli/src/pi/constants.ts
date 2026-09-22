@@ -93,3 +93,28 @@ export function buildPiAcpEnv(): Record<string, string> {
   const bin = findPiBin();
   return bin ? { [PI_ACP_PI_COMMAND_ENV]: bin } : {};
 }
+
+/**
+ * The spawnable command + args that launch the pi-acp adapter.
+ *
+ * Prefers a globally-installed `pi-acp` binary (fast, no network) and falls
+ * back to `npx -y` so the adapter still works on a machine that has not
+ * installed it globally. npx on a cold cache can stall on the download, so a
+ * present binary is always better.
+ */
+export function resolvePiAcpCommand(): { command: string; args: string[] } {
+  try {
+    const probe = process.platform === 'win32' ? `where ${PI_ACP_PACKAGE}` : `command -v ${PI_ACP_PACKAGE}`;
+    const output = execSync(probe, { encoding: 'utf-8', windowsHide: true });
+    const first = output
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.length > 0);
+    if (first) {
+      return { command: first, args: [] };
+    }
+  } catch {
+    // Not on PATH — fall through to npx.
+  }
+  return { command: 'npx', args: ['-y', PI_ACP_SPEC] };
+}

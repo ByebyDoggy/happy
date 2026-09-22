@@ -1,5 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KNOWN_ACP_AGENTS, resolveAcpAgentConfig } from './acpAgentConfig';
+import { resolvePiAcpCommand } from '@/pi/constants';
+
+vi.mock('@/pi/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/pi/constants')>();
+  return {
+    ...actual,
+    resolvePiAcpCommand: vi.fn(),
+  };
+});
+
+const mockedResolvePiAcpCommand = vi.mocked(resolvePiAcpCommand);
 
 describe('KNOWN_ACP_AGENTS', () => {
   it('defines built-in Gemini, OpenCode, and Pi command mappings', () => {
@@ -7,12 +18,18 @@ describe('KNOWN_ACP_AGENTS', () => {
       gemini: { command: 'gemini', args: ['--experimental-acp'] },
       opencode: { command: 'opencode', args: ['acp'] },
       // Pi has no ACP mode of its own; the adapter bridges it to `pi --mode rpc`.
-      pi: { command: 'npx', args: ['-y', 'pi-acp@0.0.33'] },
+      pi: { command: 'pi-acp', args: [] },
     });
   });
 });
 
 describe('resolveAcpAgentConfig', () => {
+  beforeEach(() => {
+    mockedResolvePiAcpCommand.mockReset();
+    // Default: a globally-installed adapter exists.
+    mockedResolvePiAcpCommand.mockReturnValue({ command: 'pi-acp', args: [] });
+  });
+
   it('resolves known agent names to predefined command + args', () => {
     expect(resolveAcpAgentConfig(['gemini'])).toEqual({
       agentName: 'gemini',
@@ -37,7 +54,17 @@ describe('resolveAcpAgentConfig', () => {
     });
   });
 
-  it('resolves pi to the adapter that bridges ACP to pi RPC', () => {
+  it('resolves pi to a globally-installed adapter binary when present', () => {
+    expect(resolveAcpAgentConfig(['pi'])).toEqual({
+      agentName: 'pi',
+      command: 'pi-acp',
+      args: [],
+    });
+  });
+
+  it('falls back to npx when the adapter is not installed globally', () => {
+    mockedResolvePiAcpCommand.mockReturnValue({ command: 'npx', args: ['-y', 'pi-acp@0.0.33'] });
+
     expect(resolveAcpAgentConfig(['pi'])).toEqual({
       agentName: 'pi',
       command: 'npx',
@@ -45,11 +72,11 @@ describe('resolveAcpAgentConfig', () => {
     });
   });
 
-  it('keeps extra pi args after the pinned adapter spec', () => {
+  it('keeps extra pi args after the resolved adapter command', () => {
     expect(resolveAcpAgentConfig(['pi', '--verbose'])).toEqual({
       agentName: 'pi',
-      command: 'npx',
-      args: ['-y', 'pi-acp@0.0.33', '--verbose'],
+      command: 'pi-acp',
+      args: ['--verbose'],
     });
   });
 

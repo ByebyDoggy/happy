@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { execSync } from 'node:child_process';
 
-import { buildPiAcpEnv, findPiBin, PI_ACP_PI_COMMAND_ENV } from './constants';
+import { buildPiAcpEnv, findPiBin, PI_ACP_PI_COMMAND_ENV, resolvePiAcpCommand } from './constants';
 
 vi.mock('node:child_process', () => ({ execSync: vi.fn() }));
 
@@ -108,5 +108,31 @@ describe('buildPiAcpEnv', () => {
 
   it('adds nothing when pi cannot be located, so the adapter reports it', () => {
     expect(buildPiAcpEnv()).toEqual({});
+  });
+});
+
+describe('resolvePiAcpCommand', () => {
+  beforeEach(() => {
+    mockedExecSync.mockReset();
+  });
+
+  it('spawns a globally-installed adapter binary directly', () => {
+    mockedExecSync.mockReturnValue('/usr/local/bin/pi-acp\n' as never);
+
+    expect(resolvePiAcpCommand()).toEqual({ command: '/usr/local/bin/pi-acp', args: [] });
+  });
+
+  it('falls back to npx when the adapter is not on PATH', () => {
+    mockedExecSync.mockImplementation(() => {
+      throw new Error('not found');
+    });
+
+    expect(resolvePiAcpCommand()).toEqual({ command: 'npx', args: ['-y', 'pi-acp@0.0.33'] });
+  });
+
+  it('takes the first match when several binaries are on PATH', () => {
+    mockedExecSync.mockReturnValue('/a/pi-acp\n/b/pi-acp\n' as never);
+
+    expect(resolvePiAcpCommand()).toEqual({ command: '/a/pi-acp', args: [] });
   });
 });
