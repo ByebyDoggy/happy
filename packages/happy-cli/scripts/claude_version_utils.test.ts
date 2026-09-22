@@ -248,16 +248,25 @@ describe('Claude Version Utils - Cross-Platform Detection', () => {
     });
 
     it('should handle Unix-style absolute paths', () => {
+      // '/usr/local/bin/claude' is deliberately reported as 'PATH' on Windows, which
+      // has no such directory, so this test has to state the host it describes.
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+
       const unixPaths = [
         '/usr/local/bin/claude',
         '/opt/homebrew/bin/claude',
         '/home/user/.local/bin/claude'
       ];
 
-      unixPaths.forEach(path => {
-        const result = detectSourceFromPath(path);
-        expect(['Homebrew', 'native installer']).toContain(result);
-      });
+      try {
+        unixPaths.forEach(entry => {
+          const result = detectSourceFromPath(entry);
+          expect(['Homebrew', 'native installer']).toContain(result);
+        });
+      } finally {
+        Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
+      }
     });
   });
 
@@ -279,14 +288,31 @@ describe('Claude Version Utils - Cross-Platform Detection', () => {
 
   describe('getVersion', () => {
     it('falls back to --version for native binaries without adjacent package.json', () => {
-      const testCliPath = `/tmp/test-claude-version-${process.pid}-${Date.now()}`;
-      fs.writeFileSync(testCliPath, '#!/bin/sh\necho "2.1.177 (Claude Code)"\n');
-      fs.chmodSync(testCliPath, 0o755);
+      // The "native binary" fixture has to differ by platform: Windows cannot execute
+      // an extensionless #!/bin/sh script at all (no shebang support), so there the
+      // running node.exe stands in. It is a real executable whose own directory has no
+      // adjacent package.json, which is exactly the branch under test.
+      const useShebangFixture = process.platform !== 'win32';
+      const testCliPath = useShebangFixture
+        ? `/tmp/test-claude-version-${process.pid}-${Date.now()}`
+        : process.execPath;
+
+      if (useShebangFixture) {
+        fs.writeFileSync(testCliPath, '#!/bin/sh\necho "2.1.177 (Claude Code)"\n');
+        fs.chmodSync(testCliPath, 0o755);
+      } else {
+        const adjacentPkg = path.join(path.dirname(testCliPath), 'package.json');
+        if (fs.existsSync(adjacentPkg)) {
+          throw new Error(`${adjacentPkg} now exists, so ${testCliPath} no longer exercises the no-package.json fallback; pick another fixture.`);
+        }
+      }
 
       try {
-        expect(getVersion(testCliPath)).toBe('2.1.177');
+        expect(getVersion(testCliPath)).toBe(useShebangFixture ? '2.1.177' : process.versions.node);
       } finally {
-        fs.unlinkSync(testCliPath);
+        if (useShebangFixture) {
+          fs.unlinkSync(testCliPath);
+        }
       }
     });
   });

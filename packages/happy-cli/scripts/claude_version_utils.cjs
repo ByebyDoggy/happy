@@ -193,8 +193,14 @@ function detectSourceFromPath(resolvedPath) {
     const normalized = resolvedPath.toLowerCase();
     const path = require('path');
 
-    // Use path.normalize() for proper cross-platform path handling
-    const normalizedPath = path.normalize(resolvedPath).toLowerCase();
+    // Normalise with POSIX rules on every host. The patterns below are written
+    // with '/' and cover both POSIX and Windows layouts, so a path must keep its
+    // own shape: on Windows path.normalize() rewrites '/opt/homebrew/bin/claude'
+    // to '\opt\homebrew\bin\claude', after which no POSIX prefix can match and
+    // the answer degrades to 'PATH'. Unifying separators first, then normalising
+    // with posix rules, resolves '.'/'..' identically everywhere and makes both
+    // layouts matchable regardless of which platform produced the path.
+    const normalizedPath = path.posix.normalize(resolvedPath.replace(/\\/g, '/')).toLowerCase();
 
     // Bun: ~/.bun/bin/claude -> ../node_modules/@anthropic-ai/claude-code/cli.js
     // Works on Windows too: C:\Users\[user]\.bun\bin\claude
