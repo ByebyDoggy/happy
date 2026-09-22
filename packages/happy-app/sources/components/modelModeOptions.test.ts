@@ -142,8 +142,46 @@ describe('modelModeOptions', () => {
             'gpt-5.6-luna',
             'my-workspace-model',
         ]);
+        // The shared catalog array is copied, never appended to in place.
         expect(models).toHaveLength(4);
-        expect(includeConfiguredModel('claude', models, 'my-workspace-model')).toBe(models);
+    });
+
+    it('lets Claude and Antigravity carry a model the catalog does not know', () => {
+        // Relays serve ids the hardcoded list will never contain, and the key
+        // reaches the CLI verbatim as `--model <key>`, so dropping it would
+        // strand the session on a model the picker refuses to show.
+        const claudeModels = getClaudeModelModes();
+        expect(includeConfiguredModel('claude', claudeModels, 'cn:deepseek-v4.1-flash[1M]')).toEqual([
+            ...claudeModels,
+            {
+                key: 'cn:deepseek-v4.1-flash[1M]',
+                name: 'cn:deepseek-v4.1-flash[1M]',
+                description: 'custom model',
+            },
+        ]);
+        expect(claudeModels).toHaveLength(5);
+
+        const agyModels = getAgyModelModes();
+        expect(includeConfiguredModel('agy', agyModels, 'Gemini 9 Pro')).toEqual([
+            ...agyModels,
+            { key: 'Gemini 9 Pro', name: 'Gemini 9 Pro', description: 'saved model' },
+        ]);
+    });
+
+    it('leaves flavors that publish their own model list alone', () => {
+        // Pi reports its models over ACP once a session runs, and the retired
+        // harnesses are gone from the picker, so the no-metadata fallback must
+        // not invent an entry for them.
+        const models = getCodexModelModes();
+        for (const flavor of ['gemini', 'openclaw', 'pi', null, undefined] as const) {
+            expect(includeConfiguredModel(flavor, models, 'my-workspace-model')).toBe(models);
+        }
+
+        // Nothing to add: no key at all, the sentinel, or one already listed.
+        expect(includeConfiguredModel('claude', models, null)).toBe(models);
+        expect(includeConfiguredModel('claude', models, '')).toBe(models);
+        expect(includeConfiguredModel('claude', models, 'default')).toBe(models);
+        expect(includeConfiguredModel('claude', models, 'gpt-6-astra')).toBe(models);
     });
 
     it('only offers the current-generation claude models', () => {
