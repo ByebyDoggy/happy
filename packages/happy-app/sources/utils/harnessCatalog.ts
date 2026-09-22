@@ -12,6 +12,7 @@ export const HARNESS_NAMES: Record<NewSessionAgentType, string> = {
     agy: 'Antigravity',
     gemini: 'Gemini',
     openclaw: 'OpenClaw',
+    pi: 'Pi',
 };
 
 /**
@@ -33,6 +34,7 @@ export const HARNESS_ORDER: readonly NewSessionAgentType[] = [
     'claude',
     'codex',
     'agy',
+    'pi',
     'rig',
 ];
 
@@ -65,6 +67,9 @@ export function isHarnessAvailable({
     // Antigravity is niche enough that an old or incomplete capability report
     // must not advertise it speculatively. Its daemon has to say it is installed.
     if (key === 'agy') return availability?.agy === true;
+    // Same guard for Pi: it only exists through the ACP adapter, so it should
+    // appear only once a machine reports the adapter (or PI_ACP_PI_COMMAND).
+    if (key === 'pi') return availability?.pi === true;
     return !availability || availability[key] === true;
 }
 
@@ -90,10 +95,12 @@ export function listAvailableHarnesses({
     selected?: NewSessionAgentType | null;
 }): HarnessOption[] {
     const keys = HARNESS_ORDER.filter((key) => (
-        (key === selected && key !== 'agy')
+        (key === selected && key !== 'agy' && key !== 'pi')
         || isHarnessAvailable({ availability, happyAgentAvailable, key })
     ));
-    const fallback = HARNESS_ORDER.filter((key) => key !== 'agy');
+    // The fallback catalog keeps niche harnesses out so a machine that reports
+    // nothing is not presumed to run them — same reason Antigravity is dropped.
+    const fallback = HARNESS_ORDER.filter((key) => key !== 'agy' && key !== 'pi');
     return (keys.length > 0 ? keys : fallback).map((key) => ({
         key,
         name: HARNESS_NAMES[key],

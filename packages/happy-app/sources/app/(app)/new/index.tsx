@@ -111,6 +111,8 @@ const agentIcons = {
     openclaw: require('@/assets/images/icon-openclaw.png'),
     gemini: require('@/assets/images/icon-gemini.png'),
     agy: require('@/assets/images/icon-agy.png'),
+    // No dedicated pi glyph yet; reuse the neutral Happy mark. Picker + avatar.
+    pi: require('@/assets/images/icon-monochrome.png'),
 };
 
 type AgentKey = NewSessionAgentType;
@@ -120,6 +122,7 @@ const ALL_AGENTS: { key: AgentKey; label: string }[] = [
     { key: 'claude', label: 'claude code' },
     { key: 'codex', label: 'codex' },
     { key: 'agy', label: 'antigravity' },
+    { key: 'pi', label: 'pi' },
     { key: 'rig', label: 'happy' },
 ];
 
