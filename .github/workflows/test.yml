@@ -7,6 +7,7 @@ on:
             - 'package.json'
             - 'pnpm-lock.yaml'
             - 'pnpm-workspace.yaml'
+            - '.npmrc'
             - '.github/workflows/test.yml'
     push:
         branches:
@@ -16,6 +17,7 @@ on:
             - 'package.json'
             - 'pnpm-lock.yaml'
             - 'pnpm-workspace.yaml'
+            - '.npmrc'
             - '.github/workflows/test.yml'
 
 concurrency:
@@ -26,10 +28,11 @@ jobs:
     unit-tests:
         name: unit tests (${{ matrix.os }})
         strategy:
-            # Both platforms are the point: the suites are shared, but a fair
-            # share of the code is platform-specific (path handling, sandbox
-            # backends, signal delivery, binary names). Let one platform's
-            # failure stay visible instead of cancelling the other.
+            # Both platforms are the point, not a nicety: nothing else ran unit
+            # tests on Windows, which is how three Windows-only failures sat in
+            # happy-server and how the ripgrep and Claude-detection paths broke
+            # outright. Let one platform's failure stay visible instead of
+            # cancelling the other.
             fail-fast: false
             matrix:
                 os: [ubuntu-latest, windows-latest]
@@ -51,15 +54,28 @@ jobs:
 
             # postinstall also unpacks the committed difftastic/ripgrep archives
             # into tools/unpacked, which the ripgrep tests exercise, and generates
-            # the Prisma client the server tests import.
+            # the Prisma client happy-server imports.
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
+            # First: happy-server and happy-agent resolve @slopus/happy-wire's
+            # types from happy-wire/dist, which only its own build produces.
+            - name: happy-wire unit tests
+              run: pnpm --filter @slopus/happy-wire --fail-if-no-match test
+
             # `test` is `build && vitest run --project unit`: the CLI tests spawn
             # the built binary, and the integration projects hit real APIs, so
-            # they are deliberately not part of this gate.
+            # they stay out of this gate.
             - name: happy-cli unit tests
-              run: pnpm --filter happy test
+              run: pnpm --filter happy --fail-if-no-match test
 
+            - name: happy-server unit tests
+              run: pnpm --filter happy-server --fail-if-no-match test
+
+            - name: happy-agent unit tests
+              run: pnpm --filter happy-agent --fail-if-no-match test
+
+            # The app's own `test` script is bare `vitest`, which would open a
+            # watcher, so run it explicitly.
             - name: happy-app unit tests
-              run: pnpm --filter happy-app exec vitest run
+              run: pnpm --filter happy-app --fail-if-no-match exec vitest run
