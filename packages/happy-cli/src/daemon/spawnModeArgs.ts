@@ -1,12 +1,5 @@
 import type { SpawnSessionOptions } from '@/modules/common/registerCommonHandlers';
 
-/**
- * Agent ids the daemon knows how to launch as a subcommand of Happy itself.
- * `pi` is here rather than in the ACP runner's own list because the daemon
- * spawns `happy acp pi`, not the adapter directly.
- */
-export const DAEMON_NATIVE_AGENTS = ['claude', 'codex', 'gemini', 'openclaw', 'agy'] as const;
-
 export function shouldForwardDaemonPermissionMode(
   agent: string,
   permissionMode: string | undefined,
