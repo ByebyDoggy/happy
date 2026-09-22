@@ -1,0 +1,65 @@
+name: Unit tests
+
+on:
+    pull_request:
+        paths:
+            - 'packages/**'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'pnpm-workspace.yaml'
+            - '.github/workflows/test.yml'
+    push:
+        branches:
+            - main
+        paths:
+            - 'packages/**'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'pnpm-workspace.yaml'
+            - '.github/workflows/test.yml'
+
+concurrency:
+    group: unit-tests-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    unit-tests:
+        name: unit tests (${{ matrix.os }})
+        strategy:
+            # Both platforms are the point: the suites are shared, but a fair
+            # share of the code is platform-specific (path handling, sandbox
+            # backends, signal delivery, binary names). Let one platform's
+            # failure stay visible instead of cancelling the other.
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
+        timeout-minutes: 30
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            # postinstall also unpacks the committed difftastic/ripgrep archives
+            # into tools/unpacked, which the ripgrep tests exercise, and generates
+            # the Prisma client the server tests import.
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            # `test` is `build && vitest run --project unit`: the CLI tests spawn
+            # the built binary, and the integration projects hit real APIs, so
+            # they are deliberately not part of this gate.
+            - name: happy-cli unit tests
+              run: pnpm --filter happy test
+
+            - name: happy-app unit tests
+              run: pnpm --filter happy-app exec vitest run
