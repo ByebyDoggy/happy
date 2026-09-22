@@ -12,6 +12,7 @@ import {
     getClaudeModelModes,
     getClaudePermissionModes,
     getGeminiPermissionModes,
+    getPiPermissionModes,
     getDefaultEffortKey,
     getDefaultModelKey,
     getEffortLevelsForModel,
@@ -433,5 +434,40 @@ describe('modelModeOptions', () => {
         ]);
         expect(filterPermissionModesForCli(modes, '1.2.1-beta.2')).toEqual(modes);
         expect(filterPermissionModesForCli(modes, undefined)).toEqual(modes);
+    });
+
+    // Pi's adapter has no per-tool approval gate, so the picker offers a single
+    // Default mode rather than promising Claude/Codex policies it cannot
+    // deliver. The trap is that pi-acp also republishes its reasoning levels
+    // through the legacy ACP modes channel; those must never be read as
+    // permission modes.
+    it('offers pi a single Default permission mode', () => {
+        expect(getPiPermissionModes(translate).map((mode) => mode.key)).toEqual(['default']);
+        expect(getAvailablePermissionModes('pi', null, translate).map((mode) => mode.key)).toEqual([
+            'default',
+        ]);
+    });
+
+    it('does not turn pi reasoning levels into permission modes', () => {
+        // The shape happy-cli publishes for a real pi session: models and
+        // thinking levels, and no operating modes.
+        const piSession = {
+            path: '/repo',
+            host: 'host',
+            version: '1.2.4',
+            models: [{ code: 'm1', value: 'M1', description: null }],
+            currentModelCode: 'm1',
+            thoughtLevels: ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'].map((level) => ({
+                code: level,
+                value: `Thinking: ${level}`,
+                description: null,
+            })),
+            currentThoughtLevelCode: 'medium',
+        } as any;
+
+        expect(getAvailablePermissionModes('pi', piSession, translate).map((mode) => mode.key)).toEqual([
+            'default',
+        ]);
+        expect(getAvailableModels('pi', piSession, translate).map((model) => model.key)).toEqual(['m1']);
     });
 });

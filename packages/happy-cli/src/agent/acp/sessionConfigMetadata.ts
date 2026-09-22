@@ -86,6 +86,35 @@ function findConfigOptionByCategory(
   return null;
 }
 
+/**
+ * Mirror of the thinking levels a provider already published as a
+ * `thought_level` config option.
+ *
+ * `pi-acp` sends its reasoning levels twice: once as the `thought_level` config
+ * option, and again through the legacy `modes_update` / `current_mode_update`
+ * notifications. The legacy channel exists for real session modes, so taking it
+ * at face value wrote the reasoning levels into `operatingModes` — the app then
+ * offered "off / minimal / … / xhigh" as *permission modes*, and selecting one
+ * silently changed the reasoning effort instead.
+ *
+ * Only a provable copy is dropped: same ids, same count. A provider whose
+ * legacy modes are genuine modes, or only partly overlap, keeps them.
+ */
+function mirrorsThoughtLevels(
+  ids: readonly string[],
+  thoughtLevels: MetadataOption[] | undefined,
+): boolean {
+  if (ids.length === 0 || !thoughtLevels || thoughtLevels.length !== ids.length) {
+    return false;
+  }
+  const declared = new Set(thoughtLevels.map((level) => level.code));
+  return ids.every((id) => declared.has(id));
+}
+
+function isThoughtLevelId(id: string, thoughtLevels: MetadataOption[] | undefined): boolean {
+  return !!thoughtLevels?.some((level) => level.code === id);
+}
+
 function applyConfigCategory(
   metadata: Metadata,
   option: SessionConfigOption | null,
@@ -202,7 +231,14 @@ export function mergeAcpSessionConfigIntoMetadata(metadata: Metadata, snapshot: 
     next.currentModelCode = snapshot.models.currentModelId;
   }
 
-  if (!hasModeFromConfig && snapshot.modes) {
+  if (
+    !hasModeFromConfig
+    && snapshot.modes
+    && !mirrorsThoughtLevels(
+      snapshot.modes.availableModes.map((mode) => mode.id),
+      next.thoughtLevels,
+    )
+  ) {
     next.operatingModes = snapshot.modes.availableModes.map((mode) => ({
       code: mode.id,
       value: mode.name,
@@ -211,7 +247,7 @@ export function mergeAcpSessionConfigIntoMetadata(metadata: Metadata, snapshot: 
     next.currentOperatingModeCode = snapshot.modes.currentModeId;
   }
 
-  if (snapshot.currentModeId) {
+  if (snapshot.currentModeId && !isThoughtLevelId(snapshot.currentModeId, next.thoughtLevels)) {
     next.currentOperatingModeCode = snapshot.currentModeId;
   }
 

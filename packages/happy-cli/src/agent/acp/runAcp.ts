@@ -325,12 +325,17 @@ function extractConfigSelector(
   category: 'mode' | 'model',
 ): AcpConfigSelector | null {
   const optionMatchesCategory = (option: SessionConfigOption): boolean => {
-    if (option.category) {
-      // A provider that declares a category means it. The id/name fallback
-      // below exists for providers that omit the field entirely — running it
-      // anyway would let "model" match "mode" as a prefix and put the model
-      // list in the mode slot.
-      return option.category === category;
+    const declared = option.category;
+    // A provider that declares a category means it. Running the id/name
+    // fallback anyway would let "model" match "mode" as a prefix and hand the
+    // model list to the mode slot.
+    //
+    // `other` and `_`-prefixed names are the spec's own "uncategorized / custom
+    // extension" escape hatches — the schema tells clients to handle unknown
+    // categories gracefully, so those still fall through to the heuristic
+    // rather than becoming invisible to both selectors.
+    if (declared && declared !== 'other' && !declared.startsWith('_')) {
+      return declared === category;
     }
     // Some ACP providers omit category; fallback to id/name heuristics.
     const id = normalizeComparable(option.id);

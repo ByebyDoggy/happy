@@ -168,6 +168,118 @@ describe('sessionConfigMetadata', () => {
     expect(next.currentModelCode).toBe('new-model');
   });
 
+  // pi-acp publishes its thinking levels twice: as a `thought_level` config
+  // option, and again through the legacy modes channel. The legacy channel is
+  // for real session modes, so a verbatim copy must not reach operatingModes —
+  // the app rendered it as permission modes ("off / minimal / … / xhigh") and
+  // selecting one silently changed the reasoning effort instead.
+  it('does not publish thinking levels as operating modes when a provider mirrors them into legacy modes', () => {
+    const thoughtLevels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+    const asOptions = thoughtLevels.map((value) => ({ value, name: `Thinking: ${value}` }));
+
+    let next = mergeAcpSessionConfigIntoMetadata(createBaseMetadata(), {
+      configOptions: [
+        selectOption({
+          id: 'model',
+          name: 'Model',
+          category: 'model',
+          currentValue: 'm1',
+          options: [
+            { value: 'm1', name: 'M1' },
+            { value: 'm2', name: 'M2' },
+          ],
+        }),
+        selectOption({
+          id: 'thought_level',
+          name: 'Thinking',
+          category: 'thought_level',
+          currentValue: 'medium',
+          options: asOptions,
+        }),
+      ],
+    });
+    // The real event order: config options, then the legacy mirror.
+    next = mergeAcpSessionConfigIntoMetadata(next, {
+      modes: {
+        availableModes: thoughtLevels.map((id) => ({ id, name: `Thinking: ${id}` })),
+        currentModeId: 'medium',
+      },
+    });
+    next = mergeAcpSessionConfigIntoMetadata(next, { currentModeId: 'medium' });
+
+    expect(next.operatingModes).toBeUndefined();
+    expect(next.currentOperatingModeCode).toBeUndefined();
+    expect(next.thoughtLevels?.map((level) => level.code)).toEqual(thoughtLevels);
+    expect(next.currentThoughtLevelCode).toBe('medium');
+    expect(next.models?.map((model) => model.code)).toEqual(['m1', 'm2']);
+    expect(next.currentModelCode).toBe('m1');
+  });
+
+  it('keeps legacy modes that are not a copy of the thinking levels', () => {
+    let next = mergeAcpSessionConfigIntoMetadata(createBaseMetadata(), {
+      configOptions: [
+        selectOption({
+          id: 'thought_level',
+          name: 'Thinking',
+          category: 'thought_level',
+          currentValue: 'medium',
+          options: [
+            { value: 'low', name: 'Low' },
+            { value: 'medium', name: 'Medium' },
+            { value: 'high', name: 'High' },
+          ],
+        }),
+      ],
+    });
+    next = mergeAcpSessionConfigIntoMetadata(next, {
+      modes: {
+        availableModes: [
+          { id: 'ask', name: 'Ask' },
+          { id: 'code', name: 'Code' },
+        ],
+        currentModeId: 'code',
+      },
+    });
+
+    expect(next.operatingModes).toEqual([
+      { code: 'ask', value: 'Ask' },
+      { code: 'code', value: 'Code' },
+    ]);
+    expect(next.currentOperatingModeCode).toBe('code');
+    expect(next.thoughtLevels?.map((level) => level.code)).toEqual(['low', 'medium', 'high']);
+  });
+
+  it('clears mirrored modes on the later configOptions event when the mirror arrived first', () => {
+    const thoughtLevels = ['low', 'medium', 'high'];
+
+    // Out of order: the legacy mirror lands before the config options, so there
+    // is nothing to compare it against yet. The config-options event then finds
+    // no `mode` category and deletes the mode slot, which repairs it.
+    let next = mergeAcpSessionConfigIntoMetadata(createBaseMetadata(), {
+      modes: {
+        availableModes: thoughtLevels.map((id) => ({ id, name: id })),
+        currentModeId: 'medium',
+      },
+    });
+    expect(next.operatingModes?.map((mode) => mode.code)).toEqual(thoughtLevels);
+
+    next = mergeAcpSessionConfigIntoMetadata(next, {
+      configOptions: [
+        selectOption({
+          id: 'thought_level',
+          name: 'Thinking',
+          category: 'thought_level',
+          currentValue: 'medium',
+          options: thoughtLevels.map((value) => ({ value, name: value })),
+        }),
+      ],
+    });
+
+    expect(next.operatingModes).toBeUndefined();
+    expect(next.currentOperatingModeCode).toBeUndefined();
+    expect(next.thoughtLevels?.map((level) => level.code)).toEqual(thoughtLevels);
+  });
+
   it('extracts configOptions payload from either array or wrapped object', () => {
     const option = selectOption({
       id: 'model',

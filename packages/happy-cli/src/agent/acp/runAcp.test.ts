@@ -559,9 +559,10 @@ describe('runAcp', () => {
 
   it('does not let a declared model category satisfy the mode selector', async () => {
     // The pi adapter declares category: "model" on its model picker and gives
-    // modes their own config option. "model" contains "mode" as a prefix, so
-    // the id/name fallback must not run when a category is declared — running
-    // it put the seventeen-model list into the mode slot.
+    // the thinking levels their own category. Both must land in their own slot
+    // and never in the mode slot. (The selector behaviour itself is covered by
+    // "sends a mode request to the legacy modes channel" below — this pins the
+    // metadata that reaches the app.)
     mocks.backendState.startSessionMessages = [
       {
         type: 'event',
@@ -630,6 +631,143 @@ describe('runAcp', () => {
     ]);
     expect(configMerge!.currentModelCode).toBe('claude-sonnet');
     expect(configMerge!.currentThoughtLevelCode).toBe('medium');
+  });
+
+  it('sends a mode request to the legacy modes channel when only models are categorized', async () => {
+    // pi-acp declares category: "model" on an option literally named "model",
+    // and publishes its session modes through the legacy channel. "model"
+    // contains "mode" as a prefix, so the id/name fallback must not run once a
+    // category is declared — running it made the model option the mode
+    // selector, which dropped every real mode request as "unknown".
+    mocks.backendState.startSessionMessages = [
+      {
+        type: 'event',
+        name: 'config_options_update',
+        payload: {
+          configOptions: [
+            {
+              type: 'select',
+              id: 'thought_level',
+              name: 'Thinking',
+              category: 'thought_level',
+              currentValue: 'medium',
+              options: [
+                { value: 'low', name: 'Thinking: low' },
+                { value: 'medium', name: 'Thinking: medium' },
+              ],
+            },
+            {
+              type: 'select',
+              id: 'model',
+              name: 'Model',
+              category: 'model',
+              currentValue: 'm1',
+              options: [
+                { value: 'm1', name: 'M1' },
+                { value: 'm2', name: 'M2' },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        type: 'event',
+        name: 'modes_update',
+        payload: {
+          currentModeId: 'ask',
+          availableModes: [
+            { id: 'ask', name: 'Ask' },
+            { id: 'code', name: 'Code' },
+          ],
+        },
+      },
+    ];
+
+    const runPromise = runAcp({
+      credentials: { token: 'token', encryption: { type: 'legacy', secret: new Uint8Array(32) } },
+      agentName: 'pi',
+      command: 'npx',
+      args: ['-y', 'pi-acp@0.0.33'],
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.getUserMessageHandler()).toBeTypeOf('function');
+    });
+
+    mocks.getUserMessageHandler()!({
+      role: 'user',
+      content: { type: 'text', text: 'Switch then run' },
+      meta: {
+        permissionMode: 'code',
+        model: 'm2',
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.backendState.prompts).toHaveLength(1);
+    });
+
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.backendState.setModeCalls).toEqual(['code']);
+    expect(mocks.backendState.setConfigOptionCalls).toEqual([{ configId: 'model', value: 'm2' }]);
+    expect(mocks.backendState.setModelCalls).toEqual([]);
+  });
+
+  it('still reads a selector the provider left uncategorized', async () => {
+    // ACP defines `category: "other"` for a selector the provider cannot
+    // classify and tells clients to handle unknown categories gracefully, so
+    // "other" keeps falling through to the id/name heuristic instead of
+    // becoming invisible to every selector.
+    mocks.backendState.startSessionMessages = [
+      {
+        type: 'event',
+        name: 'config_options_update',
+        payload: {
+          configOptions: [
+            {
+              type: 'select',
+              id: 'model',
+              name: 'Model',
+              category: 'other',
+              currentValue: 'm1',
+              options: [
+                { value: 'm1', name: 'M1' },
+                { value: 'm2', name: 'M2' },
+              ],
+            },
+          ],
+        },
+      },
+    ];
+
+    const runPromise = runAcp({
+      credentials: { token: 'token', encryption: { type: 'legacy', secret: new Uint8Array(32) } },
+      agentName: 'opencode',
+      command: 'opencode',
+      args: ['acp'],
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.getUserMessageHandler()).toBeTypeOf('function');
+    });
+
+    mocks.getUserMessageHandler()!({
+      role: 'user',
+      content: { type: 'text', text: 'Run with the chosen model' },
+      meta: { model: 'm2' },
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.backendState.prompts).toHaveLength(1);
+    });
+
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.backendState.setConfigOptionCalls).toEqual([{ configId: 'model', value: 'm2' }]);
+    expect(mocks.backendState.setModelCalls).toEqual([]);
   });
 
   it('switches ACP model and permission mode when requested values match config options', async () => {
