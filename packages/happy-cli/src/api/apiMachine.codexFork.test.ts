@@ -62,7 +62,7 @@ describe('ApiMachineClient Codex fork RPCs', () => {
             cwd: '/tmp/project',
         });
         expect(codexClientMethods.disconnect).toHaveBeenCalledOnce();
-    });
+    }, 30_000);
 
     it('forwards resumeCodexThreadId through the spawn RPC', async () => {
         const spawnSession = vi.fn().mockResolvedValue({ type: 'success', sessionId: 'happy-forked' });

@@ -248,7 +248,8 @@ describe('claudeLocal --continue handling', () => {
         expect(spawnArgs).toContain('-r');
     });
 
-    it('should initialize sandbox, wrap command, and cleanup on exit', async () => {
+    // Windows has no sandbox backend: @anthropic-ai/sandbox-runtime supports only macOS and Linux.
+    it.skipIf(process.platform === 'win32')('should initialize sandbox, wrap command, and cleanup on exit', async () => {
         await claudeLocal({
             abort: new AbortController().signal,
             sessionId: null,

@@ -1,6 +1,6 @@
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, sep } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -160,13 +160,13 @@ describe('resolveCodexImageCacheDir', () => {
         expect(resolveCodexImageCacheDir({
             cacheRootDir: '/tmp/happy-cache',
             sessionId: 'session-1',
-        })).toBe('/tmp/happy-cache/session-1');
+        })).toBe(resolve('/tmp/happy-cache', 'session-1'));
     });
 
     it('defaults to Happy local state instead of arbitrary OS temp', () => {
         expect(resolveCodexImageCacheDir({
             sessionId: 'session-4',
-        })).toBe('/home/test/.happy/codex-image-cache/session-4');
+        })).toBe(resolve('/home/test/.happy', 'codex-image-cache', 'session-4'));
     });
 
     it('keeps malformed session ids inside the cache root', () => {
@@ -177,7 +177,7 @@ describe('resolveCodexImageCacheDir', () => {
             sessionId: '../outside/nested',
         });
 
-        expect(resolved.startsWith(`${cacheRootDir}${sep}`)).toBe(true);
+        expect(resolved.startsWith(`${resolve(cacheRootDir)}${sep}`)).toBe(true);
         expect(resolved).not.toContain('..');
     });
 });

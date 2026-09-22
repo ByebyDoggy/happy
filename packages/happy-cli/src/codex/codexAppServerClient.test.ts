@@ -138,7 +138,8 @@ describe('CodexAppServerClient sandbox integration', () => {
         expect(new CodexAppServerClient().supportsGoalActions()).toBe(false);
     });
 
-    it('wraps transport when sandbox is enabled', async () => {
+    // Windows has no sandbox backend: @anthropic-ai/sandbox-runtime supports only macOS and Linux.
+    it.skipIf(process.platform === 'win32')('wraps transport when sandbox is enabled', async () => {
         // Dynamic import to ensure mocks are applied
         const { CodexAppServerClient } = await import('./codexAppServerClient');
         const client = new CodexAppServerClient(sandboxConfig);
@@ -184,7 +185,8 @@ describe('CodexAppServerClient sandbox integration', () => {
         await client.disconnect();
     });
 
-    it('resets sandbox on disconnect', async () => {
+    // Windows has no sandbox backend: @anthropic-ai/sandbox-runtime supports only macOS and Linux.
+    it.skipIf(process.platform === 'win32')('resets sandbox on disconnect', async () => {
         const { CodexAppServerClient } = await import('./codexAppServerClient');
         const client = new CodexAppServerClient(sandboxConfig);
 

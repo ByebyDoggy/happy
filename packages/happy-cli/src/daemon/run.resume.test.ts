@@ -343,7 +343,8 @@ describe('daemon resume fallback', () => {
     expect(vi.mocked(process.kill).mock.calls.length).toBe(0);
   });
 
-  it('prevents a fresh archive from starting a second real owner before the first exits', async () => {
+  // Windows has no POSIX signal delivery: child.kill('SIGTERM') terminates the fixture immediately, so its graceful-stop ack ({ stopping: true }) never arrives.
+  it.skipIf(process.platform === 'win32')('prevents a fresh archive from starting a second real owner before the first exits', async () => {
     await boot();
     const owners: ChildProcess[] = [];
     const codexMetadata = { ...metadata, flavor: 'codex', codexThreadId: 'thread-old' };
@@ -381,7 +382,8 @@ describe('daemon resume fallback', () => {
     }
   });
 
-  it('keeps one real owner/backend tree through concurrent resumes, archive, and daemon restart', async () => {
+  // Windows has no POSIX signal delivery: child.kill('SIGTERM') terminates the fixture immediately, so its graceful-stop ack ({ stopping: true }) never arrives.
+  it.skipIf(process.platform === 'win32')('keeps one real owner/backend tree through concurrent resumes, archive, and daemon restart', async () => {
     await boot();
     const owners: ChildProcess[] = [];
     const backends: number[] = [];

@@ -75,7 +75,8 @@ describe('desktop credential reuse', () => {
     await expect(stat(mocks.configuration.privateKeyFile)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('publishes complete V2 credentials with owner-only permissions and a separate stable machine ID', async () => {
+  // Windows has no POSIX permission bits: open(..., 0o600) still reports stat().mode 0o666.
+  it.skipIf(process.platform === 'win32')('publishes complete V2 credentials with owner-only permissions and a separate stable machine ID', async () => {
     await writeJson(join(agentHome, 'machine.json'), { machineId: 'agent-machine' });
     const first = await importDesktopCredentials();
     expect(first.serverUrl).toBe(serverUrl);
@@ -145,7 +146,8 @@ describe('desktop credential reuse', () => {
     await expect(stat(mocks.configuration.privateKeyFile)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('rejects credential symlinks and never prints invalid JSON contents', async () => {
+  // Windows needs Developer Mode or elevation to create symlinks; symlink() fails with EPERM.
+  it.skipIf(process.platform === 'win32')('rejects credential symlinks and never prints invalid JSON contents', async () => {
     const sensitive = 'synthetic-token-that-must-not-appear-in-errors';
     await writeFile(join(agentHome, 'access.key'), sensitive);
     await expect(importDesktopCredentials()).rejects.not.toThrow(sensitive);
