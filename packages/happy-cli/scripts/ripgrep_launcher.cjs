@@ -38,9 +38,11 @@ function findSystemRipgrep() {
 
     for (const { cmd, args } of commands) {
         try {
+            // No stdio:'ignore' here: it suppresses the very stdout we are
+            // reading, so execFileSync returns null and the lookup always
+            // misses — on every platform, not just Windows.
             const result = execFileSync(cmd, args, {
-                encoding: 'utf8',
-                stdio: 'ignore'
+                encoding: 'utf8'
             });
 
             if (result) {
@@ -119,7 +121,8 @@ function loadRipgrepNative() {
     const runtime = detectRuntime();
     const toolsDir = path.join(__dirname, '..', 'tools', 'unpacked');
     const nativePath = path.join(toolsDir, 'ripgrep.node');
-    const binaryPath = path.join(toolsDir, 'rg');
+    // The Windows artifact is rg.exe; the bare name only ever matches on POSIX.
+    const binaryPath = path.join(toolsDir, process.platform === 'win32' ? 'rg.exe' : 'rg');
 
     // Try Node.js native addon first (preserves existing behavior)
     if (runtime === 'node') {
@@ -135,13 +138,15 @@ function loadRipgrepNative() {
     // Bun or Node.js fallback: Try system ripgrep
     const systemRipgrep = findSystemRipgrep();
     if (systemRipgrep) {
-        console.info(`Using system ripgrep: ${systemRipgrep}`);
+        // stderr, not stdout: stdout is ripgrep's own output channel, and a
+        // single stray line here makes `--json` unparseable for callers.
+        console.warn(`Using system ripgrep: ${systemRipgrep}`);
         return createRipgrepWrapper(systemRipgrep);
     }
 
     // Local binary fallback
     if (fs.existsSync(binaryPath)) {
-        console.info('Using packaged ripgrep binary');
+        console.warn('Using packaged ripgrep binary');
         return createRipgrepWrapper(binaryPath);
     }
 
