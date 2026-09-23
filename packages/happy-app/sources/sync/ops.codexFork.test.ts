@@ -25,6 +25,10 @@ describe('codex fork ops', () => {
         refreshSessions.mockReset();
     });
 
+    // Each test awaits a cold `import('./ops')`, which pulls the whole ops module
+    // graph (storage, encryption). That is milliseconds alone but can pass the 5s
+    // default when the suite is busy, and a timeout there leaves a pending
+    // continuation that breaks the next test's spy assertions.
     it('passes new-session mode defaults through spawn RPC', async () => {
         machineRPC.mockResolvedValue({ type: 'success', sessionId: 'happy-new' });
 
@@ -50,7 +54,7 @@ describe('codex fork ops', () => {
                 effortLevel: 'xhigh',
             }),
         );
-    });
+    }, 30_000);
 
     it('forks a full Codex thread and spawns a Codex session resumed to the new thread', async () => {
         machineRPC.mockImplementation(async (_machineId: string, method: string) => {
@@ -91,7 +95,7 @@ describe('codex fork ops', () => {
             }),
         );
         expect(refreshSessions).toHaveBeenCalledTimes(1);
-    });
+    }, 30_000);
 
     it('duplicates a Codex thread from a selected user item before spawning', async () => {
         machineRPC.mockImplementation(async (_machineId: string, method: string) => {
@@ -133,5 +137,5 @@ describe('codex fork ops', () => {
                 forkedFromMessageId: 'message-2',
             }),
         );
-    });
+    }, 30_000);
 });

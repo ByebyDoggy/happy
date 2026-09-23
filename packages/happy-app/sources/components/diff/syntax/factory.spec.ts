@@ -38,6 +38,8 @@ describe('isolated Prism worker', () => {
         expect(result.runs[3].some((run: { k: string }) => run.k === 'keyword')).toBe(true);
     });
 
+    // transformSync over the 121KB generated factory: ~1.5s alone, past the 5s
+    // default once the suite is busy.
     it('survives the actual Worklets transform with no captured module functions', () => {
         const filename = fileURLToPath(new URL('./factory.generated.ts', import.meta.url));
         const code = transformSync(readFileSync(filename, 'utf8'), {
@@ -58,7 +60,7 @@ describe('isolated Prism worker', () => {
         expect(result.runs).toEqual(tokenize(input).runs);
         // Web serializes the callable factory, not Worklets' private initData.
         expect(runInNewContext(`(${factory.toString()})()`, { performance })(input).runs).toEqual(result.runs);
-    });
+    }, 30_000);
 
     it('bounds long lines and unknown languages without changing source text', () => {
         const worker = createDiffSyntax();
