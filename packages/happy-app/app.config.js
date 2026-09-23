@@ -150,13 +150,21 @@ export default {
                 // serve emulators and 32-bit devices — neither of which is a
                 // build target here. Dropping them is most of the APK size.
                 //
-                // Unconditional, because this file is evaluated once: shipping
-                // an x86_64 simulator build later means branching on
-                // EAS_BUILD_PROFILE here rather than adding a flag to eas.json.
+                // The `simulator` profile overrides the ABIs through this env
+                // var, because an Android emulator on an x86_64 host refuses any
+                // AVD whose CPU architecture does not match the host ("System
+                // image must match the host architecture"), so a local smoke
+                // test needs x86_64 libraries. Profile `env` is used rather than
+                // EAS_BUILD_PROFILE because it is injected when this file is
+                // evaluated, so `eas config --profile simulator` can prove the
+                // override instead of leaving it to the build server.
                 "expo-build-properties",
                 {
                     android: {
-                        buildArchs: ["arm64-v8a"]
+                        buildArchs: (process.env.APP_ANDROID_BUILD_ARCHS || "arm64-v8a")
+                            .split(",")
+                            .map((arch) => arch.trim())
+                            .filter(Boolean)
                     }
                 }
             ],

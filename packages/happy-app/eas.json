@@ -33,6 +33,15 @@
         "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
       }
     },
+    "simulator": {
+      "distribution": "internal",
+      "channel": "simulator",
+      "env": {
+        "APP_ENV": "preview",
+        "APP_ANDROID_BUILD_ARCHS": "x86_64",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
     "preview-store": {
       "autoIncrement": true,
       "distribution": "store",
