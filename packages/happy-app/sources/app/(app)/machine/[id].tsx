@@ -328,6 +328,17 @@ export default function MachineDetailScreen() {
                                 }
                             />
                         )}
+                        {metadata.cliAvailability.pi !== undefined && (
+                            <Item
+                                title="Pi"
+                                showChevron={false}
+                                rightElement={
+                                    <Text style={{ color: metadata.cliAvailability.pi ? '#34C759' : theme.colors.textSecondary, fontSize: 14 }}>
+                                        {metadata.cliAvailability.pi ? t('machine.cliInstalled') : t('machine.cliNotFound')}
+                                    </Text>
+                                }
+                            />
+                        )}
                         <Item
                             title={t('machine.lastDetected')}
                             subtitle={new Date(metadata.cliAvailability.detectedAt).toLocaleString()}

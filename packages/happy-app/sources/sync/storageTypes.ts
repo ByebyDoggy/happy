@@ -468,6 +468,10 @@ export const MachineMetadataSchema = z.object({
         gemini: z.boolean(),
         openclaw: z.boolean(),
         agy: z.boolean().optional(), // optional: older CLIs don't report agy
+        // Same rationale as agy. Without this entry zod strips the capability the
+        // daemon publishes, and isHarnessAvailable can never see pi installed —
+        // which kept pi out of the harness picker entirely.
+        pi: z.boolean().optional(),
         rig: z.boolean().optional(), // Rig runs its own Happy-connected daemon
         detectedAt: z.number(),
     }).optional(),

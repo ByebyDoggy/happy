@@ -45,6 +45,31 @@ describe('MetadataSchema', () => {
 });
 
 describe('MachineMetadataSchema', () => {
+    it('keeps the pi capability a daemon reports', () => {
+        // happy-cli's detectCLIAvailability publishes pi next to the older
+        // entries. An object schema with no pi key silently strips it, and
+        // isHarnessAvailable then never sees pi installed — so the harness stays
+        // out of the picker no matter what the machine reports.
+        const metadata = MachineMetadataSchema.parse({
+            host: 'workstation',
+            platform: 'win32',
+            happyCliVersion: '1.2.4',
+            happyHomeDir: 'C:/Users/dev/.happy',
+            homeDir: 'C:/Users/dev',
+            cliAvailability: {
+                claude: true,
+                codex: true,
+                gemini: false,
+                openclaw: false,
+                agy: false,
+                pi: true,
+                detectedAt: 123,
+            },
+        });
+
+        expect(metadata.cliAvailability?.pi).toBe(true);
+    });
+
     it('preserves the Rig creation catalog and future machine fields', () => {
         const metadata = MachineMetadataSchema.parse({
             host: 'workstation',
